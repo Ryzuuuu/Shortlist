@@ -1,0 +1,21 @@
+@import '../styles/tokens.css';
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --color-accent: var(--color-accent);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
