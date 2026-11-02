@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@shortlist/core": "*",
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",
