@@ -1,2 +1,7 @@
 // Core domain logic — no framework imports allowed
-export {};
+export * from './policy'
+export * from './redact'
+export * from './quote-verifier'
+export * from './score-calculator'
+export * from './pipeline'
+export * from './dedup'

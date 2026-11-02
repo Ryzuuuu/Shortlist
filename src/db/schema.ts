@@ -55,17 +55,25 @@ export const llmProviderEnum = pgEnum('llm_provider', [
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 /**
- * Better Auth will manage this table; we extend it with role + clientId.
- * Better Auth requires: id, name, email, emailVerified, image, createdAt, updatedAt.
+ * This IS Better Auth's user table — owned and written by Better Auth via the
+ * Drizzle adapter. We extend it with two additionalFields:
+ *   • role     — set server-side only; never accepted from sign-up input
+ *   • clientId — FK to clients; non-null only for role='client' users
+ *
+ * Better Auth core fields: id, name, email, emailVerified, image, createdAt, updatedAt.
+ * Column names must match what Better Auth's drizzle adapter expects (camelCase
+ * property → snake_case column via our explicit column('..') calls).
  */
 export const users = pgTable('users', {
-  id: text('id').primaryKey(), // cuid2
+  id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').default(false).notNull(),
+  emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
+  // ── Extension fields (additionalFields in auth.ts) ──
+  // role is ALWAYS set by the server (seed / admin action). Never from sign-up body.
   role: roleEnum('role').notNull().default('recruiter'),
-  // client-role users are scoped to exactly one client organisation
+  // Only populated for role='client'; foreign key enforced at DB level.
   clientId: text('client_id').references(() => clients.id, {
     onDelete: 'set null',
   }),
