@@ -2,7 +2,9 @@
 
 Target: Vercel (app) + Neon (Postgres) + Vercel Blob (CV files). `vercel.json` pins the region to `bom1` (Mumbai) for users in India; put the Neon project in a nearby region (AWS Asia Pacific, Mumbai or Singapore).
 
-> Status: the app builds (`next build`) and all checks pass locally. It has **not** yet been deployed or run end to end against a live database or Blob store, so work through the verification list at the bottom after the first deploy.
+> Status: the app builds (`next build`) and all checks pass. It has been run locally against a live Neon database (Singapore): migrations applied, the seed loaded 44 CVs (40 distinct candidates after de-duplication), and a scripted smoke test confirmed sign-in for all three roles, wrong-password and self-sign-up refusal, role checks on the upload and CSV APIs, and that one client's pages contain none of another client's candidates. It has **not** yet been deployed to Vercel, tried with Vercel Blob, or checked on a phone, so work through the verification list at the bottom after the first deploy.
+
+> Known behaviour: a client opening another client's requisition gets an HTTP **200** page that says "not found", not a 404 status, because the page streams (Cache Components) and the status line is sent before the access check finishes. No data is included in that response. A strict 404 would need the check to run before streaming starts.
 
 ## 1. Services
 

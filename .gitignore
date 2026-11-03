@@ -50,3 +50,4 @@ next-env.d.ts
 
 # keep the example env template tracked (contains no secrets)
 !.env.example
+.neon
