@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx --env-file=.env.local scripts/seed/seed.ts",
+    "seed:cvs": "tsx scripts/seed/generate.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
@@ -45,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.4",
     "happy-dom": "^21.0.4",
+    "jszip": "^3.10.2",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",

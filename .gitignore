@@ -47,3 +47,6 @@ next-env.d.ts
 
 # local dev CV storage (personal data - never commit)
 .uploads/
+
+# keep the example env template tracked (contains no secrets)
+!.env.example

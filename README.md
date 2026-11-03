@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Demo seed
+
+```bash
+npm run db:seed     # needs DATABASE_URL in .env.local; idempotent
+npm run seed:cvs    # regenerate seed/cvs (44 synthetic PDF/DOCX files)
+```
+
+The seed creates 2 clients, a recruiter, a delivery head and one hiring manager per client. Roles are
+assigned by the seed only; sign-up never accepts one. It runs 44 synthetic CVs through the real ingestion
+pipeline with the `heuristic` provider (no API key): 40 normal, 2 duplicates (matched by email and by phone),
+1 scanned PDF (lands in "Needs review") and 1 corrupt file (`failed`, retryable). The top candidates are moved to
+submitted/shortlisted so the client portal has data. Set `SEED_PASSWORD` to choose the demo password.
