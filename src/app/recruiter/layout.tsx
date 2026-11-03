@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { requireStaff } from '@/lib/session'
-import { SignOutButton } from './sign-out-button'
+import { SignOutButton } from '@/components/sign-out-button'
 
 /**
  * Static shell. The signed-in user is read at request time, so it streams in
