@@ -86,3 +86,23 @@ export function verifyQuotes(
     }
   })
 }
+
+// ─── Locating a verified quote ────────────────────────────────────────────────
+
+export interface QuoteSpan {
+  start: number
+  end: number
+}
+
+/**
+ * Find where a quote sits in the ORIGINAL text, for highlighting. Uses the same
+ * rules as verifyQuote (case-insensitive, any whitespace run is equal), so a
+ * quote that verified is always locatable. Returns null if it does not occur.
+ */
+export function locateQuote(quote: string | null | undefined, sourceText: string): QuoteSpan | null {
+  const words = (quote ?? '').trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return null
+  const pattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+')
+  const m = new RegExp(pattern, 'i').exec(sourceText)
+  return m ? { start: m.index, end: m.index + m[0].length } : null
+}

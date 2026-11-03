@@ -51,3 +51,7 @@ All assumptions are labelled with their impact and the step they affect.
 
 ## A12 — Pipeline Stage Ordering
 **Assumption:** Valid pipeline stages in order are: `sourced → screened → submitted → shortlisted → interview → offered → joined`. `rejected` is a terminal state reachable from any stage. Transitions are enforced by the pipeline state machine in `packages/core`.
+
+## A12 — View Gate and the Submissions Row
+**Assumption:** A `submissions` row is created the first time a recruiter opens a candidate's CV (it holds `viewedByRecruiterAt`). The row's existence does NOT make the candidate visible to clients; only the pipeline stage (`submitted` or later, A7) does. "Submit to client" is refused server-side unless `viewedByRecruiterAt` is set, in addition to being disabled in the UI.
+**Impact:** Client portal queries must filter on pipeline stage, never on the presence of a submission.
