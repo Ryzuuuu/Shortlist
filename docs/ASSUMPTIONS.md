@@ -42,6 +42,7 @@ All assumptions are labelled with their impact and the step they affect.
 
 ## A9 — Anonymised Audit Stub on Deletion
 **Assumption:** On hard-delete (DPDP deletion request), the candidate row and all files are deleted. A stub row is inserted into `audit_log` with hashed candidate ID, timestamp, and action `'candidate_deleted'` — no personal data retained.
+**Detail:** the candidate ID in the stub is a keyed HMAC (`AUDIT_HASH_KEY`, falling back to `BETTER_AUTH_SECRET`), so it cannot be reversed by brute force. Existing audit rows for the candidate are re-pointed to the same anonymised ID and their metadata cleared. Stored CV files and cached AI output (which contains CV quotes) are deleted first; if a file cannot be deleted, nothing else is touched and the request can be retried.
 
 ## A10 — AI Rank vs Recruiter Agreement (Delivery Head)
 **Assumption:** The weekly agreement report compares, per requisition, the AI score rank order against the set of candidates the recruiter submitted. "Agreement" = submitted candidates were all in the top-N by AI score (where N = submitted count). Disagreements list candidates submitted by the recruiter who were NOT in the top-N.
@@ -55,3 +56,7 @@ All assumptions are labelled with their impact and the step they affect.
 ## A12 — View Gate and the Submissions Row
 **Assumption:** A `submissions` row is created the first time a recruiter opens a candidate's CV (it holds `viewedByRecruiterAt`). The row's existence does NOT make the candidate visible to clients; only the pipeline stage (`submitted` or later, A7) does. "Submit to client" is refused server-side unless `viewedByRecruiterAt` is set, in addition to being disabled in the UI.
 **Impact:** Client portal queries must filter on pipeline stage, never on the presence of a submission.
+
+## A13 — Consent Withdrawal and Right of Access
+**Assumption:** Deletion on request (A9) is the only data-subject workflow built. Consent is recorded at upload (A8) and shown on the candidate page; a separate "withdraw consent" state and a data-export (right of access) flow are not built. The `consent_withdrawn_at` column exists for them.
+**Impact:** Out of the core slice; listed as optional depth in the brief.

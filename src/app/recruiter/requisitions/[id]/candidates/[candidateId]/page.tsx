@@ -8,6 +8,7 @@ import type { CandidateProfile } from '@/db/types'
 import { requireStaff } from '@/lib/session'
 import { getLatestScorecard, getRequisition, type CriterionResult } from '@/lib/queries/recruiter'
 import { CandidateReview } from './candidate-review'
+import { PrivacyPanel } from './privacy-panel'
 import { loadReviewState } from './review-state'
 
 export default async function CandidatePage({ params }: { params: Promise<{ id: string; candidateId: string }> }) {
@@ -49,6 +50,13 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
         criteria={scorecard.criteria.map((c) => ({ id: c.id, label: c.label, mustHave: c.mustHave }))}
         initialOpened={state.opened}
         stage={state.stage}
+      />
+      <PrivacyPanel
+        requisitionId={id}
+        candidateId={candidateId}
+        consentPurpose={cand.consentPurpose}
+        consentAt={cand.consentAt.toISOString()}
+        consentWithdrawnAt={cand.consentWithdrawnAt?.toISOString() ?? null}
       />
     </>
   )

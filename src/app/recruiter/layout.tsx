@@ -27,9 +27,14 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
 }
 
 async function UserBar() {
-  const { session } = await requireStaff()
+  const { session, user } = await requireStaff()
   return (
     <div className="flex items-center gap-2 text-sm">
+      {user.role === 'delivery_head' && (
+        <Link href="/delivery/audit" className="text-[var(--color-muted)] hover:text-[var(--color-ink)]">
+          Audit log
+        </Link>
+      )}
       <span className="hidden text-[var(--color-muted)] sm:inline">{session.user.email}</span>
       <SignOutButton />
     </div>

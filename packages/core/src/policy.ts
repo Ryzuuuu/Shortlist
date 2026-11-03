@@ -51,6 +51,7 @@ export type PolicyAction =
   // Delivery head only
   | 'insights:read'
   | 'report:export'
+  | 'audit:read' // who viewed what, and when (delivery_head only)
   // Admin / user management (delivery_head only)
   | 'user:write'
 

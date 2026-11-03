@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { can, transition, type PipelineStage } from '@shortlist/core'
 import { db } from '@/db'
 import { auditLog, pipelineEntries, submissions } from '@/db/schema'
+import { deleteCandidateData } from '@/lib/compliance/delete-candidate'
 import { requireStaff } from '@/lib/session'
 
 const Ids = z.object({ requisitionId: z.string().min(1), candidateId: z.string().min(1) })
@@ -87,5 +88,21 @@ export async function submitCandidate(input: unknown): Promise<ActionResult> {
   await db.insert(auditLog).values({ id: createId(), userId: user.id, candidateId, requisitionId, action: 'candidate_submitted' })
 
   revalidatePath(`/recruiter/requisitions/${requisitionId}`)
+  return { ok: true }
+}
+
+/**
+ * DPDP deletion on request: permanently removes the candidate's profile, CV files
+ * and cached AI results, leaving an anonymised audit stub (ASSUMPTION A9).
+ */
+export async function requestCandidateDeletion(input: unknown): Promise<ActionResult> {
+  const { user } = await requireStaff()
+  const parsed = z.object({ candidateId: z.string().min(1), requisitionId: z.string().min(1) }).safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'Invalid request.' }
+  if (!can(user, 'candidate:delete', { type: 'candidate' })) return { ok: false, error: 'Not allowed.' }
+
+  const result = await deleteCandidateData(parsed.data.candidateId, user.id)
+  if (!result.ok) return result
+  revalidatePath(`/recruiter/requisitions/${parsed.data.requisitionId}`)
   return { ok: true }
 }
