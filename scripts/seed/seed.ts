@@ -11,8 +11,8 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { createId } from '@paralleldrive/cuid2'
 import { db } from '@/db'
-import { auth } from '@/lib/auth'
-import { clients, cvFiles, pipelineEntries, requisitions, scorecards, scores, submissions, users } from '@/db/schema'
+import { hashPassword } from 'better-auth/crypto'
+import { accounts, clients, cvFiles, pipelineEntries, requisitions, scorecards, scores, submissions, users } from '@/db/schema'
 import type { ScorecardCriterion } from '@/db/types'
 import { computeHash } from '@/lib/ingestion/parse'
 import { processCvFile } from '@/lib/ingestion/process'
@@ -48,16 +48,26 @@ const FILTERS_A = [
   { id: 'f-loc', label: 'Location Noida', type: 'location', value: 'Noida' },
 ]
 
+/**
+ * Sign-up is disabled in auth.ts, so accounts are written directly: a user row
+ * with its role, and a credential account holding Better Auth's own password hash.
+ */
 async function ensureUser(email: string, name: string, role: 'recruiter' | 'client' | 'delivery_head', clientId: string | null) {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
-  if (!existing) {
-    await auth.api.signUpEmail({ body: { email, password: PASSWORD, name } })
+  if (existing) {
+    await db.update(users).set({ role, clientId }).where(eq(users.id, existing.id))
+    return existing.id
   }
-  // Role is written directly: the sign-up body can never set it.
-  await db.update(users).set({ role, clientId }).where(eq(users.email, email))
-  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
-  if (!row) throw new Error(`Could not create ${email}`)
-  return row.id
+  const id = createId()
+  await db.insert(users).values({ id, name, email, emailVerified: true, role, clientId })
+  await db.insert(accounts).values({
+    id: createId(),
+    userId: id,
+    accountId: id,
+    providerId: 'credential',
+    password: await hashPassword(PASSWORD),
+  })
+  return id
 }
 
 async function main() {

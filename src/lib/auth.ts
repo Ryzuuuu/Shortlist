@@ -34,10 +34,13 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     /**
-     * Email verification is disabled — the staffing firm creates accounts
-     * server-side (seed / admin action). There is no self-registration flow
-     * exposed to end users.
+     * Self-registration is OFF. A new account would default to the recruiter
+     * role, i.e. read access to every candidate, so anyone able to POST to the
+     * sign-up endpoint would get in. The firm creates accounts server-side
+     * (seed script / admin), writing the user and credential rows directly.
+     * This also blocks server-side `auth.api.signUpEmail` calls.
      */
+    disableSignUp: true,
     requireEmailVerification: false,
   },
 
