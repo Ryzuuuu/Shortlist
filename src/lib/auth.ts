@@ -114,3 +114,14 @@ export async function getSession(
 ): Promise<AuthSession | null> {
   return auth.api.getSession({ headers })
 }
+
+const ROLES: readonly Role[] = ['recruiter', 'client', 'delivery_head']
+
+/**
+ * Adapt a Better Auth user to the policy's PolicyUser. An unknown or missing
+ * role yields null, which `can()` denies, so a bad row fails closed.
+ */
+export function toPolicyUser(user: AuthUser | null | undefined) {
+  if (!user || !ROLES.includes(user.role as Role)) return null
+  return { id: user.id, role: user.role as Role, clientId: user.clientId ?? null }
+}
