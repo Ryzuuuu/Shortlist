@@ -11,12 +11,20 @@ import path from 'path'
 const LOCAL_DIR = path.join(process.cwd(), '.uploads')
 const blobEnabled = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN)
 
+/** Vercel's filesystem is read-only and ephemeral: refuse loudly instead of losing CVs. */
+function assertLocalStorageAllowed() {
+  if (process.env.VERCEL) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not set. CV storage needs Vercel Blob when deployed.')
+  }
+}
+
 export async function putFile(id: string, filename: string, data: Buffer): Promise<string> {
   if (blobEnabled()) {
     const { put } = await import('@vercel/blob')
     const blob = await put(`cvs/${id}/${filename}`, data, { access: 'private', addRandomSuffix: true })
     return blob.url
   }
+  assertLocalStorageAllowed()
   await mkdir(LOCAL_DIR, { recursive: true })
   const key = `local:${id}`
   await writeFile(path.join(LOCAL_DIR, id), data)
