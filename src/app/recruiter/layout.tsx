@@ -31,6 +31,11 @@ async function UserBar() {
   return (
     <div className="flex items-center gap-2 text-sm">
       {user.role === 'delivery_head' && (
+        <Link href="/delivery" className="text-[var(--color-muted)] hover:text-[var(--color-ink)]">
+          Dashboard
+        </Link>
+      )}
+      {user.role === 'delivery_head' && (
         <Link href="/delivery/audit" className="text-[var(--color-muted)] hover:text-[var(--color-ink)]">
           Audit log
         </Link>

@@ -45,7 +45,9 @@ All assumptions are labelled with their impact and the step they affect.
 **Detail:** the candidate ID in the stub is a keyed HMAC (`AUDIT_HASH_KEY`, falling back to `BETTER_AUTH_SECRET`), so it cannot be reversed by brute force. Existing audit rows for the candidate are re-pointed to the same anonymised ID and their metadata cleared. Stored CV files and cached AI output (which contains CV quotes) are deleted first; if a file cannot be deleted, nothing else is touched and the request can be retried.
 
 ## A10 — AI Rank vs Recruiter Agreement (Delivery Head)
-**Assumption:** The weekly agreement report compares, per requisition, the AI score rank order against the set of candidates the recruiter submitted. "Agreement" = submitted candidates were all in the top-N by AI score (where N = submitted count). Disagreements list candidates submitted by the recruiter who were NOT in the top-N.
+**Assumption:** Each week (IST, Monday to Sunday), for every requisition with submissions, N = candidates the recruiter submitted. A submission *agrees* if its AI score is at or above the Nth-best AI score (ties count as inside, so a recruiter is never marked wrong for choosing between equal scores). Agreement % = agreeing submissions / all submissions (per requisition and overall). *Disagreements* are submitted candidates ranked below the AI's top N, listed with their rank. AI top-N picks that were not submitted are included in the CSV for context but do not affect the percentage.
+**"This week":** uses `submissions.updatedAt`, which nothing touches after a recruiter submits, so it stands in for the submit time. A dedicated `submitted_at` column would be cleaner if the schema is revisited.
+**Export:** CSV includes candidate names (the delivery head already has audit access); text cells are neutralised against spreadsheet formula injection.
 
 ## A11 — Broken CV Handling
 **Assumption:** A file that cannot be parsed at all (corrupt, password-protected, zero bytes, unsupported MIME) is immediately marked `failed` with an error reason stored in `cv_files.error`. It appears in the recruiter's upload list with a retry button and is never silently dropped.

@@ -15,5 +15,6 @@ export default function Home() {
 async function RoleRedirect() {
   const user = toPolicyUser((await getSession(await headers()))?.user)
   if (!user) redirect('/login')
-  return redirect(user.role === 'client' ? '/portal' : '/recruiter')
+  const home = { client: '/portal', delivery_head: '/delivery', recruiter: '/recruiter' }[user.role]
+  return redirect(home)
 }
