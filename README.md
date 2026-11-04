@@ -37,21 +37,23 @@ One function, `can(user, action, resource)` in `packages/core/src/policy.ts`, is
 
 ## Run locally
 
-Needs Node 20+ and a Postgres database (a free [Neon](https://neon.tech) project works).
+Needs Node 24 and a [Neon](https://neon.tech) Postgres database (the free tier is enough; the app uses Neon's serverless driver, so plain local Postgres does not work).
 
 ```bash
 npm install
-cp .env.example .env.local   # set DATABASE_URL and BETTER_AUTH_SECRET (32+ random characters)
+cp .env.example .env.local   # set DATABASE_URL, BETTER_AUTH_SECRET (32+ random characters) and SEED_PASSWORD (12+ characters)
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
+Full step-by-step instructions, the deployment and the environment variable names are in [`deployment.md`](deployment.md).
+
 The seed loads a demo client, a requisition with a scorecard, and 44 synthetic CVs (including 2 duplicates, 1 scan and 1 corrupt file)
 through the real pipeline. Demo logins: `recruiter@shortlist.test`, `client.meridian@shortlist.test`, `head@shortlist.test`.
 The password is whatever you set in `SEED_PASSWORD` (required, 12+ characters; there is deliberately no default because this repository is public). The same CVs are in `seed/cvs/` for trying the upload screen by hand.
 
-A committed `.npmrc` sets `legacy-peer-deps` because `vitest` and `@types/node@20` have conflicting peer ranges; without it a plain `npm install` fails with ERESOLVE (`npm ci` is unaffected).
+A committed `.npmrc` sets `legacy-peer-deps` because of a peer-range conflict between `vitest` and the Node types; without it a plain `npm install` can fail with ERESOLVE (`npm ci` is unaffected).
 
 ## Scripts
 
@@ -71,13 +73,14 @@ packages/core/   pure domain logic, no framework imports (policy, redaction, sco
 src/app/         recruiter/, portal/ (client), delivery/, api/
 src/lib/         auth, ingestion, llm providers, queries, compliance
 scripts/seed/    synthetic CVs and demo seed
-docs/            REQUIREMENTS.md (brief -> code -> test), ASSUMPTIONS.md, DEPLOYMENT.md
+docs/            REQUIREMENTS.md (brief -> code -> test), ASSUMPTIONS.md
+deployment.md    run locally, how it is deployed, environment variable names, demo logins
 SECURITY.md      security model, known limitations, how to report
 ```
 
 Every item in the brief is traced to its code and its test in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
 Every assumption made where the brief was silent is labelled in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
-Deployment steps are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Deployment steps are in [`deployment.md`](deployment.md).
 
 ## Known limits
 

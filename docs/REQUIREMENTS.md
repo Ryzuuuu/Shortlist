@@ -69,7 +69,7 @@ Job-board integrations, video interviews, background verification. Payments, mes
 | API tests for client isolation and upload validation | `portal/actions.test.ts`, `upload/route.test.ts`, `npm run smoke` |
 | Dedup is global; match on e-mail, phone, then fuzzy name+company+role | `dedup.ts`, `process.ts` |
 | No `.env` or secrets tracked in git | Verified across the full history; secret scanning and push protection are enabled |
-| Deployment document; commit after every step | `docs/DEPLOYMENT.md`; small commits throughout |
+| Deployment document; commit after every step | `deployment.md`; small commits throughout |
 
 ## Known gaps
 
