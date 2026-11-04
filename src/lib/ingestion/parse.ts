@@ -6,6 +6,7 @@
  * marked 'needs_review' (ASSUMPTION A4).
  */
 import { createHash } from 'crypto'
+import { stripPageFooters } from '@shortlist/core'
 
 export interface ParseResult {
   text: string
@@ -36,7 +37,7 @@ async function parsePdf(buffer: Buffer): Promise<Omit<ParseResult, 'contentHash'
     let text: string
     try {
       // pdf-parse appends "-- 1 of 2 --" page footers; they are not CV content and must not end up in quotes.
-      text = ((await parser.getText()).text ?? '').replace(/^[ \t]*--[ \t]*\d+[ \t]+of[ \t]+\d+[ \t]*--[ \t]*$/gm, '').trim()
+      text = stripPageFooters((await parser.getText()).text ?? '')
     } finally {
       await parser.destroy()
     }

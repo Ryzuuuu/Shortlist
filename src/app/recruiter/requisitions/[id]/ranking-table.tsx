@@ -106,9 +106,15 @@ export function RankingTable({ requisitionId, rows, labels, weights }: Props) {
             <TableBody>
               {visible.map(({ r, rank }) => {
                 const action = nextAction(r)
-                const best = [...r.results]
-                  .filter((c) => c.quote && c.effectiveMet !== 'no')
-                  .sort((a, b) => (weights[b.criterionId] ?? 0) - (weights[a.criterionId] ?? 0))[0]
+                // Up to two different pieces of evidence, heaviest criteria first, so a row shows more than one reason.
+                const quotes = [
+                  ...new Set(
+                    [...r.results]
+                      .filter((c) => c.quote && c.effectiveMet !== 'no')
+                      .sort((a, b) => (weights[b.criterionId] ?? 0) - (weights[a.criterionId] ?? 0))
+                      .map((c) => c.quote as string),
+                  ),
+                ].slice(0, 2)
                 const flagged = r.checks.filter((c) => c.status === 'misses')
                 const unknown = r.checks.filter((c) => c.status === 'unknown')
                 return (
@@ -147,7 +153,11 @@ export function RankingTable({ requisitionId, rows, labels, weights }: Props) {
                           </li>
                         ))}
                       </ul>
-                      {best?.quote && <p className="mt-2 line-clamp-2 text-sm text-[var(--color-muted)]">“{best.quote}”</p>}
+                      {quotes.map((q) => (
+                        <p key={q} className="mt-2 line-clamp-1 text-sm text-[var(--color-muted)]">
+                          “{q}”
+                        </p>
+                      ))}
                     </TableCell>
                     <TableCell className="align-top">
                       <Link

@@ -2,12 +2,13 @@
  * scripts/maintenance/reextract.ts   —   npm run db:reextract
  *
  * Re-derives every candidate's profile and normalised e-mail/phone from the CV
- * text already stored, using the current extractor and normalisers. Safe to run
- * repeatedly (idempotent); run it after changing either so duplicate checks and
- * filters see consistent data. Reads and writes only the candidates table.
+ * text already stored, using the current extractor and normalisers, and removes
+ * PDF page footers from that stored text. Safe to run repeatedly (idempotent);
+ * run it after changing either so duplicate checks and filters see consistent
+ * data. Reads and writes only the candidates table.
  */
 import { eq } from 'drizzle-orm'
-import { extractProfile, normaliseEmail, normalisePhone } from '@shortlist/core'
+import { extractProfile, normaliseEmail, normalisePhone, stripPageFooters } from '@shortlist/core'
 import { db } from '@/db'
 import { candidates } from '@/db/schema'
 import type { CandidateProfile } from '@/db/types'
@@ -19,7 +20,9 @@ async function main() {
 
   let changed = 0
   for (const row of rows) {
-    const e = extractProfile(row.rawText)
+    // Drop PDF page footers ("-- 1 of 1 --") that older uploads stored as if they were CV text.
+    const rawText = stripPageFooters(row.rawText)
+    const e = extractProfile(rawText)
     const old = row.profile as CandidateProfile
     // Keep what was already there where the new pass finds nothing, so nothing is lost.
     const profile: CandidateProfile = {
@@ -41,8 +44,8 @@ async function main() {
     }
     const normalisedEmail = normaliseEmail(profile.email)
     const normalisedPhone = normalisePhone(profile.phone)
-    if (JSON.stringify(profile) === JSON.stringify(old) && normalisedEmail === row.email && normalisedPhone === row.phone) continue
-    await db.update(candidates).set({ profile, normalisedEmail, normalisedPhone, updatedAt: new Date() }).where(eq(candidates.id, row.id))
+    if (rawText === row.rawText && JSON.stringify(profile) === JSON.stringify(old) && normalisedEmail === row.email && normalisedPhone === row.phone) continue
+    await db.update(candidates).set({ rawText, profile, normalisedEmail, normalisedPhone, updatedAt: new Date() }).where(eq(candidates.id, row.id))
     changed++
   }
   console.log(`Checked ${rows.length} candidates, updated ${changed}.`)
