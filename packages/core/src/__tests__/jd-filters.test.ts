@@ -7,6 +7,7 @@ describe('extractJdFilters', () => {
     expect(f).toEqual([
       { id: 'f-exp', label: 'Experience 5-8 years', type: 'years_experience_range', value: { min: 5, max: 8 } },
       { id: 'f-notice', label: 'Notice up to 60 days', type: 'max_notice_days', value: 60 },
+      { id: 'f-loc', label: 'Location Noida', type: 'location', value: 'Noida' },
     ])
   })
 

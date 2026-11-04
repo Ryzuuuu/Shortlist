@@ -17,6 +17,7 @@ import {
   extractProfile,
   findDuplicate,
   normaliseEmail,
+  nameFromFilename,
   normalisePhone,
   redact,
   salvageQuote,
@@ -261,6 +262,11 @@ export async function processCvFile(fileId: string): Promise<ProcessOutcome> {
 
     // ── Profile + global dedup (A2) ────────────────────────────────────────
     const extracted = extractProfile(text)
+    // Templates with columns or graphics often hide the name from text extraction; the file name usually has it.
+    if (!extracted.firstName) {
+      const named = nameFromFilename(file.originalFilename)
+      if (named) Object.assign(extracted, named)
+    }
     const normEmail = normaliseEmail(extracted.email)
     const normPhone = normalisePhone(extracted.phone)
     const incoming: DedupCandidate = {

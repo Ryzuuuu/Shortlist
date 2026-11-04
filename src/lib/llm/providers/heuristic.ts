@@ -20,6 +20,7 @@ import type {
   LLMScoringResponse,
   LLMCriterionResponse,
 } from '../types'
+import { extractJdCriteria } from '@shortlist/core'
 import type { ScorecardCriterion } from '@/db/types'
 
 // ─── Heuristic scoring ────────────────────────────────────────────────────────
@@ -125,41 +126,6 @@ function scoreCriterion(
   return { criterionId: criterion.id, met, quote, confidence }
 }
 
-// ─── JD scorecard extraction ──────────────────────────────────────────────────
-
-const JD_PATTERNS: Array<{ regex: RegExp; label: string; weight: number; mustHave: boolean }> = [
-  {
-    regex: /(\d+)\+?\s*years?\s+(?:of\s+)?(?:experience|exp)/gi,
-    label: 'Years of experience',
-    weight: 0.25,
-    mustHave: true,
-  },
-  {
-    regex: /(?:required|must\s+have|essential)[:\s]+([^.\n]{10,80})/gi,
-    label: 'Required qualification',
-    weight: 0.3,
-    mustHave: true,
-  },
-  {
-    regex: /(?:bachelor'?s?|master'?s?|b\.?tech|m\.?tech|degree)\s+(?:in\s+)?([^,.\n]{5,50})/gi,
-    label: 'Education requirement',
-    weight: 0.15,
-    mustHave: false,
-  },
-  {
-    regex: /(?:proficient|experience|strong)\s+(?:in|with)\s+([^,.\n]{5,60})/gi,
-    label: 'Technical skill',
-    weight: 0.2,
-    mustHave: false,
-  },
-  {
-    regex: /(?:responsibilities|you\s+will|role\s+involves)[:\s]+([^.\n]{10,100})/gi,
-    label: 'Key responsibility',
-    weight: 0.1,
-    mustHave: false,
-  },
-]
-
 // ─── HeuristicProvider class ──────────────────────────────────────────────────
 
 export class HeuristicProvider implements LLMProvider {
@@ -176,51 +142,8 @@ export class HeuristicProvider implements LLMProvider {
     }
   }
 
-  async extractScorecard(
-    jdText: string,
-  ): Promise<Omit<ScorecardCriterion, 'id'>[]> {
-    const criteria: Omit<ScorecardCriterion, 'id'>[] = []
-    const seen = new Set<string>()
-
-    for (const pattern of JD_PATTERNS) {
-      // Reset lastIndex for global regexes
-      pattern.regex.lastIndex = 0
-      let match: RegExpExecArray | null
-      let count = 0
-
-      while ((match = pattern.regex.exec(jdText)) !== null && count < 3) {
-        const extracted = (match[1] ?? match[0]).trim().slice(0, 120)
-        const key = extracted.toLowerCase()
-        if (!seen.has(key) && extracted.length > 5) {
-          seen.add(key)
-          criteria.push({
-            label: pattern.label,
-            description: extracted,
-            weight: pattern.weight,
-            mustHave: pattern.mustHave,
-          })
-          count++
-        }
-      }
-    }
-
-    // Normalise weights so they sum to 1
-    const totalWeight = criteria.reduce((s, c) => s + c.weight, 0)
-    if (totalWeight > 0) {
-      for (const c of criteria) {
-        c.weight = Math.round((c.weight / totalWeight) * 100) / 100
-      }
-    }
-
-    // Fallback: if nothing extracted, return a generic scorecard
-    if (criteria.length === 0) {
-      return [
-        { label: 'Relevant experience', description: 'Experience relevant to the role', weight: 0.4, mustHave: true },
-        { label: 'Technical skills', description: 'Technical skills mentioned in JD', weight: 0.35, mustHave: false },
-        { label: 'Education', description: 'Required educational background', weight: 0.25, mustHave: false },
-      ]
-    }
-
-    return criteria
+  /** Reads the JD with the shared, tested extractor (packages/core/src/jd-criteria.ts). */
+  async extractScorecard(jdText: string): Promise<Omit<ScorecardCriterion, 'id'>[]> {
+    return extractJdCriteria(jdText)
   }
 }

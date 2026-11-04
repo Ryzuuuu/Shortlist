@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractProfile } from '../profile-extract'
+import { extractProfile, nameFromFilename } from '../profile-extract'
 
 /** Fixed "today" so tenure computed from "Present" is deterministic. */
 const NOW = new Date('2026-11-04T00:00:00Z')
@@ -138,7 +138,7 @@ describe('extractProfile: loose layout', () => {
   })
 
   it('reads the inline tools line', () => {
-    expect(p.skills).toEqual(expect.arrayContaining(['excel', 'kyc', 'aml']))
+    expect(p.skills).toEqual(expect.arrayContaining(['excel', 'kyc', 'aml checks']))
   })
 })
 
@@ -174,5 +174,21 @@ describe('extractProfile: details', () => {
       experienceYears: null, experienceSource: null, statedNoticeDays: null, ctcLpa: null, currentRole: null,
     })
     expect(extractProfile('asdf qwer 123', NOW).firstName).toBe('')
+  })
+})
+
+describe('nameFromFilename', () => {
+  it('reads a name from the usual ways files are named', () => {
+    expect(nameFromFilename('Ritika_Bansal_CV.pdf')).toEqual({ firstName: 'Ritika', lastName: 'Bansal' })
+    expect(nameFromFilename('arjun-rawat resume (2).docx')).toEqual({ firstName: 'Arjun', lastName: 'Rawat' })
+    expect(nameFromFilename('PoojaNair.pdf')).toEqual({ firstName: 'Pooja', lastName: 'Nair' })
+    expect(nameFromFilename('Resume - Mary Ann Joseph - final v3.pdf')).toEqual({ firstName: 'Mary', lastName: 'Ann Joseph' })
+  })
+
+  it('does not guess from a bare title, a code or a single word', () => {
+    expect(nameFromFilename('resume.pdf')).toBeNull()
+    expect(nameFromFilename('CV_final_2024.docx')).toBeNull()
+    expect(nameFromFilename('scan0001.pdf')).toBeNull()
+    expect(nameFromFilename('Ritika.pdf')).toBeNull()
   })
 })

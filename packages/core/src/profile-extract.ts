@@ -9,6 +9,8 @@
  * ("Name:", "Notice Period:"), section headings, date ranges, and plain layout.
  */
 
+import { findCity, findSkills } from './skills'
+
 export interface WorkEntry {
   company: string
   role: string
@@ -65,13 +67,6 @@ const SKILLS_HEADING_RE = /^(?:key |technical |core |it )?(?:skills|competencies
 const DEGREE_RE =
   /\b(b\.?\s?tech|m\.?\s?tech|b\.?\s?e\.?|m\.?\s?e\.?|b\.?\s?sc|m\.?\s?sc|b\.?\s?com|m\.?\s?com|b\.?\s?ca|m\.?\s?ca|b\.?\s?a\.?|m\.?\s?a\.?|mba|pgdm|ph\.?\s?d|bachelor|master|diploma|b\.?\s?b\.?\s?a)\b/i
 const INSTITUTION_RE = /\b(university|institute|college|school|iit|nit|iiit|academy)\b/i
-
-const KNOWN_SKILLS = [
-  'java', 'spring boot', 'spring', 'hibernate', 'microservices', 'rest apis', 'rest', 'sql', 'postgresql', 'mysql', 'oracle',
-  'mongodb', 'redis', 'kafka', 'rabbitmq', 'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'javascript', 'typescript', 'react',
-  'node.js', 'python', 'django', 'flask', 'c#', '.net', 'angular', 'vue', 'git', 'jenkins', 'maven', 'gradle', 'junit',
-  'selenium', 'kyc', 'aml', 'excel', 'sap', 'tally', 'power bi', 'tableau', 'jira', 'agile', 'scrum', 'ci/cd', 'linux',
-]
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
 const lines = (text: string) => text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
@@ -315,14 +310,7 @@ function extractCtcLpa(text: string): number | null {
 // ─── Skills, education, location ─────────────────────────────────────────────
 
 function extractSkills(text: string, all: string[]): string[] {
-  const lower = text.toLowerCase()
-  const found = new Set<string>()
-  for (const skill of KNOWN_SKILLS) {
-    const escaped = skill.replace(/[.+#/]/g, '\\$&')
-    if (new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`).test(lower)) found.add(skill)
-  }
-  if (found.has('spring boot')) found.delete('spring')
-  if (found.has('rest apis')) found.delete('rest')
+  const found = new Set<string>(findSkills(text))
 
   const fromList = (raw: string) => {
     for (const token of raw.split(/[,;|•·●▪•]|\s{2,}/)) {
@@ -367,9 +355,11 @@ function extractEducation(all: string[]): EducationItem[] {
   return out
 }
 
-function extractLocation(text: string): string | null {
+function extractLocation(text: string, all: string[]): string | null {
   const m = text.match(/(?:current location|location|address|city|based in)\s*[:\-–]\s*([A-Za-z][A-Za-z ,.]{2,50})/i)
-  return m?.[1] ? clean(m[1]).replace(/[,.]+$/, '') : null
+  if (m?.[1]) return clean(m[1]).replace(/[,.]+$/, '')
+  // No label: a known city in the header block (the first lines) is where the candidate lives.
+  return findCity(all.slice(0, 12).join('\n'))
 }
 
 // ─── Current role / headline ─────────────────────────────────────────────────
@@ -414,7 +404,7 @@ export function extractProfile(rawText: string, now: Date = new Date()): Extract
     headline: headline || current?.role || fallback.role || '',
     currentCompany: current?.company ?? fallback.company,
     currentRole: current?.role ?? fallback.role,
-    location: extractLocation(rawText),
+    location: extractLocation(rawText, all),
     skills: extractSkills(rawText, all),
     workHistory: entries,
     education: extractEducation(all),
@@ -424,4 +414,28 @@ export function extractProfile(rawText: string, now: Date = new Date()): Extract
     statedNoticeDays: extractNoticeDays(rawText),
     ctcLpa: extractCtcLpa(rawText),
   }
+}
+
+// ─── Fallback: a name from the file name ─────────────────────────────────────
+
+const FILENAME_NOISE = new Set([
+  'cv', 'resume', 'curriculum', 'vitae', 'final', 'updated', 'update', 'new', 'latest', 'copy', 'profile', 'doc', 'docx', 'pdf',
+  'version', 'ver', 'draft', 'job', 'application', 'bio', 'data', 'biodata', 'scanned', 'scan', 'of', 'for',
+])
+
+/**
+ * When the CV text yields no name (templates with columns or graphics often hide it),
+ * the file name usually carries one: "Ritika_Bansal_CV.pdf", "arjun-rawat resume (2).docx".
+ * Returns null unless two to four plain words remain, so it never guesses from a code or a title.
+ */
+export function nameFromFilename(filename: string): { firstName: string; lastName: string } | null {
+  const base = filename.replace(/\.[A-Za-z0-9]{2,5}$/, '')
+  const words = base
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(/[\s_.\-()[\]]+/)
+    .map((w) => w.trim())
+    .filter((w) => /^[A-Za-z][A-Za-z'’]{1,}$/.test(w) && !FILENAME_NOISE.has(w.toLowerCase()))
+  if (words.length < 2 || words.length > 4) return null
+  const [first, ...rest] = words.map(toTitleCase)
+  return { firstName: first ?? '', lastName: rest.join(' ') }
 }

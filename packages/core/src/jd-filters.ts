@@ -6,10 +6,12 @@
  * not stated is simply absent.
  */
 
+import { findCity } from './skills'
+
 export interface JdFilter {
   id: string
   label: string
-  type: 'years_experience_range' | 'max_notice_days' | 'ctc_range_lpa'
+  type: 'years_experience_range' | 'max_notice_days' | 'ctc_range_lpa' | 'location'
   value: unknown
 }
 
@@ -41,6 +43,9 @@ export function extractJdFilters(jd: string): JdFilter[] {
     const max = Number(ctc[2])
     out.push({ id: 'f-ctc', label: `CTC ${min}-${max} LPA`, type: 'ctc_range_lpa', value: { min, max } })
   }
+
+  const city = findCity(jd)
+  if (city) out.push({ id: 'f-loc', label: `Location ${city}`, type: 'location', value: city })
 
   return out
 }

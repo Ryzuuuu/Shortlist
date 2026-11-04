@@ -106,7 +106,7 @@ function arrange(opts: {
   createdAt?: Date
 } = {}) {
   state.selects = {
-    cv_files: [[{ id: 'f1', storageUrl: 'local:f1', mimeType: 'application/pdf', requisitionId: 'req-1', uploadedByUserId: 'u1' }]],
+    cv_files: [[{ id: 'f1', storageUrl: 'local:f1', originalFilename: 'cv.pdf', mimeType: 'application/pdf', requisitionId: 'req-1', uploadedByUserId: 'u1' }]],
     candidates: [
       opts.pool ?? [],
       [{ createdAt: opts.createdAt ?? new Date('2026-11-04T10:00:00Z') }],
@@ -236,6 +236,15 @@ describe('profiles and duplicates', () => {
     await processCvFile('f1')
     const profile = state.inserts.find((i) => i.table === 'candidates')?.values.profile as Row
     expect(profile).toMatchObject({ firstName: 'Ritika', lastName: 'Bansal', experienceYears: 6.5, noticeDays: 60 })
+  })
+
+  it('falls back to the file name when the CV text hides the name', async () => {
+    const noName = 'Java, Spring Boot, microservices\n6 years of experience.'
+    arrange({ parse: { text: noName, isScanned: false, failed: false, contentHash: 'hash-1' } })
+    ;(state.selects.cv_files as Row[][])[0] = [{ id: 'f1', storageUrl: 'local:f1', originalFilename: 'Asha_Rao_CV.pdf', mimeType: 'application/pdf', requisitionId: 'req-1', uploadedByUserId: 'u1' }]
+    await processCvFile('f1')
+    const profile = state.inserts.find((i) => i.table === 'candidates')?.values.profile as Row
+    expect(profile).toMatchObject({ firstName: 'Asha', lastName: 'Rao' })
   })
 
   it('reuses an existing candidate matched by e-mail instead of inserting another', async () => {
