@@ -78,16 +78,22 @@ async function main() {
     { id: IDS.reqB, clientId: IDS.clientB, createdByUserId: recruiterId, title: 'Retail Operations Analyst', jdText: 'Retail operations analyst, 2-4 years, Excel, reporting.' },
   ]).onConflictDoNothing()
 
-  await db.insert(scorecards).values([
-    { id: IDS.scA, requisitionId: IDS.reqA, version: 1, criteria: CRITERIA_A, filters: FILTERS_A },
-    {
+  // The main scorecard is kept in sync with what the product extracts from the example JD;
+  // run `npm run db:rescore` afterwards to apply a changed scorecard to existing candidates.
+  await db
+    .insert(scorecards)
+    .values({ id: IDS.scA, requisitionId: IDS.reqA, version: 1, criteria: CRITERIA_A, filters: FILTERS_A })
+    .onConflictDoUpdate({ target: scorecards.id, set: { criteria: CRITERIA_A, filters: FILTERS_A } })
+  await db
+    .insert(scorecards)
+    .values({
       id: IDS.scB,
       requisitionId: IDS.reqB,
       version: 1,
       criteria: [{ id: 'c-excel', label: 'Excel', description: 'Excel reporting', weight: 1, mustHave: true }],
       filters: null,
-    },
-  ]).onConflictDoNothing()
+    })
+    .onConflictDoNothing()
 
   // ── CVs through the real pipeline ───────────────────────────────────────────
   const cvs = await buildSeedCvs()

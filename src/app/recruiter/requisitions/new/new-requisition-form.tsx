@@ -85,6 +85,9 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
             <CardTitle>Scorecard</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
+            <p className="text-sm text-[var(--color-muted)]">
+              Each criterion has a name, what to look for in a CV, a weight, and whether it is a must-have. Edit anything before saving; nothing is scored until you do.
+            </p>
             {draft.filters.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-[var(--color-muted)]">Filters read from the JD:</span>

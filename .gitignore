@@ -51,3 +51,6 @@ next-env.d.ts
 # keep the example env template tracked (contains no secrets)
 !.env.example
 .neon
+
+# Submission package: its deployment.md contains the reviewer's demo password, so it never enters git
+submission/

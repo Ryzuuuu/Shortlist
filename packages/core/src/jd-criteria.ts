@@ -116,9 +116,11 @@ export function extractJdCriteria(jd: string): JdCriterion[] {
   const raw = picked.map((d) => (d.mustHave ? 3 : d.kind === 'skill' ? 2 : d.kind === 'duty' || d.kind === 'seniority' ? 1.5 : 1))
   const total = raw.reduce((s, w) => s + w, 0)
   const weights = raw.map((w) => Math.round((w / total) * 100) / 100)
-  // Put any rounding remainder on the first criterion so the weights sum to exactly 1.
+  // Put any rounding remainder on the LAST (lowest-weight) criterion so the weights sum to exactly 1
+  // and equally important criteria keep equal weights.
   const remainder = Math.round((1 - weights.reduce((s, w) => s + w, 0)) * 100) / 100
-  if (weights.length > 0) weights[0] = Math.round(((weights[0] as number) + remainder) * 100) / 100
+  const last = weights.length - 1
+  if (last >= 0) weights[last] = Math.round(((weights[last] as number) + remainder) * 100) / 100
 
   return picked.map((d, i) => ({ label: d.label, description: d.description, weight: weights[i] as number, mustHave: d.mustHave }))
 }

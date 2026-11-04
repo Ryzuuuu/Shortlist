@@ -21,7 +21,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:reextract": "tsx --env-file=.env.local scripts/maintenance/reextract.ts",
     "db:rescore": "tsx --env-file=.env.local scripts/maintenance/rescore.ts",
-    "smoke": "node --env-file=.env.local scripts/smoke.mjs"
+    "smoke": "node --env-file=.env.local scripts/smoke.mjs",
+    "db:demo-password": "tsx --env-file=.env.local scripts/maintenance/set-demo-password.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

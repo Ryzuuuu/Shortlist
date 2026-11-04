@@ -89,7 +89,8 @@ function scoreCriterion(
   criterion: ScorecardCriterion,
   cvText: string,
 ): LLMCriterionResponse {
-  const criterionText = `${criterion.label} ${criterion.description}`
+  // The description is what to look for in a CV; the label is only a title ("Seniority" is a word no CV contains).
+  const criterionText = criterion.description.trim() ? criterion.description : criterion.label
   const keywords = extractKeywords(criterionText)
   const lowerCv = cvText.toLowerCase()
 
