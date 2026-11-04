@@ -11,6 +11,7 @@ import { can, validateUpload } from '@shortlist/core'
 import { db } from '@/db'
 import { cvFiles, requisitions } from '@/db/schema'
 import { getSession, toPolicyUser } from '@/lib/auth'
+import { isStaleProcessing } from '@/lib/ingestion/constants'
 import { computeHash } from '@/lib/ingestion/parse'
 import { processCvFile } from '@/lib/ingestion/process'
 import { putFile } from '@/lib/ingestion/storage'
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
     .from(cvFiles)
     .where(and(eq(cvFiles.requisitionId, requisitionId), eq(cvFiles.contentHash, contentHash)))
     .limit(1)
-  if (existing && existing.status !== 'failed') {
+  // A failed file, or one abandoned mid-processing, is processed again; anything else is already handled.
+  if (existing && existing.status !== 'failed' && !isStaleProcessing(existing.status, existing.updatedAt)) {
     return Response.json({ id: existing.id, status: existing.status, duplicate: true })
   }
 

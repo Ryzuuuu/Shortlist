@@ -9,16 +9,16 @@ export default async function PortalHome() {
 
   return (
     <>
-      <h1 className="mb-3 text-3xl">Your roles</h1>
+      <h1 className="mb-6 text-3xl">Your roles</h1>
       {reqs.length === 0 ? (
         <EmptyState title="No open roles" description="When your recruiter opens a role for you, it will appear here." />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-4">
           {reqs.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/portal/requisitions/${r.id}`}
-                className="flex min-h-14 items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2"
+                className="flex min-h-14 items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4"
               >
                 <span className="font-medium">{r.title}</span>
                 {r.awaitingReview > 0 ? (

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { requireClient } from '@/lib/session'
 import { getPortalCandidate } from '@/lib/queries/portal'
 import { Badge } from '@/components/ui'
+import { describeFacts } from '@/lib/format'
 import { CandidateDecision } from './candidate-decision'
 
 const MET = {
@@ -26,11 +27,11 @@ export default async function PortalCandidate({ params }: { params: Promise<{ id
         </Link>
       </p>
 
-      <header className="mb-3 flex items-start justify-between gap-2">
+      <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl">{c.name}</h1>
           <p className="text-[var(--color-muted)]">{c.headline}</p>
-          {c.location && <p className="text-sm text-[var(--color-muted)]">{c.location}</p>}
+          <p className="text-sm text-[var(--color-muted)]">{[c.location, describeFacts(c.experienceYears, c.noticeDays)].filter(Boolean).join(' · ')}</p>
         </div>
         <div className="text-right">
           <span className="block font-serif text-4xl leading-none">{Math.round(c.total)}</span>
@@ -39,36 +40,36 @@ export default async function PortalCandidate({ params }: { params: Promise<{ id
       </header>
 
       {c.recruiterNote && (
-        <p className="mb-3 rounded-[var(--radius-md)] bg-[var(--color-surface)] p-2 text-sm">
+        <p className="mb-6 rounded-[var(--radius-md)] bg-[var(--color-surface)] p-4 text-sm">
           <span className="font-medium">From your recruiter: </span>
           {c.recruiterNote}
         </p>
       )}
 
-      <section className="mb-3">
-        <h2 className="mb-1 font-sans text-sm font-medium text-[var(--color-muted)]">Why this candidate</h2>
+      <section className="mb-6">
+        <h2 className="mb-2 font-sans text-sm font-medium text-[var(--color-muted)]">Why this candidate</h2>
         <ul className="divide-y divide-[var(--color-border)] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
           {c.evidence.map((e) => (
-            <li key={e.criterionId} className="p-2">
-              <div className="flex items-center justify-between gap-1">
+            <li key={e.criterionId} className="p-4">
+              <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{e.label}</span>
                 <Badge variant={MET[e.met].variant}>{MET[e.met].word}</Badge>
               </div>
-              {e.quote && <p className="mt-1 text-sm text-[var(--color-muted)]">“{e.quote}” <span className="text-xs">from the CV</span></p>}
+              {e.quote && <p className="mt-2 text-sm text-[var(--color-muted)]">“{e.quote}” <span className="text-xs">from the CV</span></p>}
             </li>
           ))}
         </ul>
       </section>
 
       {c.skills.length > 0 && (
-        <p className="mb-3 text-sm">
+        <p className="mb-6 text-sm">
           <span className="text-[var(--color-muted)]">Skills: </span>
           {c.skills.join(', ')}
         </p>
       )}
 
-      <section className="mb-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-        <h2 className="mb-1 font-sans text-sm font-medium text-[var(--color-muted)]">Contact</h2>
+      <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <h2 className="mb-2 font-sans text-sm font-medium text-[var(--color-muted)]">Contact</h2>
         {c.contacts ? (
           <p className="text-sm">{[c.contacts.email, c.contacts.phone].filter(Boolean).join(' · ') || 'No contact details on file.'}</p>
         ) : (
@@ -76,9 +77,9 @@ export default async function PortalCandidate({ params }: { params: Promise<{ id
         )}
       </section>
 
-      {c.rejectionReason && <p className="mb-3 text-sm text-[var(--color-muted)]">You rejected this candidate: {c.rejectionReason}</p>}
+      {c.rejectionReason && <p className="mb-6 text-sm text-[var(--color-muted)]">You rejected this candidate: {c.rejectionReason}</p>}
       {c.proposedSlot && (
-        <p className="mb-3 text-sm">
+        <p className="mb-6 text-sm">
           Interview proposed for <time dateTime={c.proposedSlot}>{new Date(c.proposedSlot).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</time> IST.
         </p>
       )}

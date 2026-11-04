@@ -33,11 +33,11 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-2" noValidate>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-2 text-sm">
         Email
         <Input name="email" type="email" autoComplete="email" required />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-2 text-sm">
         Password
         <Input name="password" type="password" autoComplete="current-password" required />
       </label>

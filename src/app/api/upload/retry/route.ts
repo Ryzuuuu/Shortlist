@@ -8,6 +8,7 @@ import { can } from '@shortlist/core'
 import { db } from '@/db'
 import { cvFiles } from '@/db/schema'
 import { getSession, toPolicyUser } from '@/lib/auth'
+import { isStaleProcessing } from '@/lib/ingestion/constants'
 import { processCvFile } from '@/lib/ingestion/process'
 
 export const maxDuration = 60
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
 
   const [file] = await db.select().from(cvFiles).where(eq(cvFiles.id, parsed.data.fileId)).limit(1)
   if (!file) return Response.json({ error: 'File not found' }, { status: 404 })
-  if (file.status === 'scored' || file.status === 'parsing') {
+  // Scored files are done. A file still parsing is in progress, unless it was abandoned (see isStaleProcessing).
+  const inProgress = (file.status === 'parsing' || file.status === 'pending') && !isStaleProcessing(file.status, file.updatedAt)
+  if (file.status === 'scored' || inProgress) {
     return Response.json({ error: `Cannot retry a file that is ${file.status}` }, { status: 409 })
   }
 

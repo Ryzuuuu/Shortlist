@@ -20,6 +20,7 @@ vi.mock('@/db/schema', () => ({
   pipelineEntries: { __t: 'pipeline_entries' },
   scorecards: { __t: 'scorecards' },
   scores: { __t: 'scores' },
+  aiReviewSamples: { __t: 'ai_review_samples' },
 }))
 vi.mock('@/db', () => {
   const take = (t: string) => state.selects[t]?.shift() ?? []

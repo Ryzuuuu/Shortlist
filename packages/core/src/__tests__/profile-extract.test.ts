@@ -163,6 +163,11 @@ describe('extractProfile: details', () => {
     expect(extractProfile(t, NOW).experienceYears).toBe(2.9)
   })
 
+  it('reads "Role, Company" and "Role - Company" lines when there is no experience section', () => {
+    expect(extractProfile('Asha Rao\nBackend Engineer, Meridian Infosys\nJava', NOW)).toMatchObject({ currentRole: 'Backend Engineer', currentCompany: 'Meridian Infosys' })
+    expect(extractProfile('Asha Rao\nJava Developer - Paragon Digital\nJava', NOW)).toMatchObject({ currentRole: 'Java Developer', currentCompany: 'Paragon Digital' })
+  })
+
   it('returns empty values rather than inventing data from nothing', () => {
     expect(extractProfile('', NOW)).toMatchObject({
       firstName: '', lastName: '', email: null, phone: null, skills: [], workHistory: [], education: [],

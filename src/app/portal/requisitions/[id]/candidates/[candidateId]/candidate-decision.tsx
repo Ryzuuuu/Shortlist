@@ -9,7 +9,7 @@ import { proposeInterview, recordClientView, rejectCandidate, shortlistCandidate
 const REASONS = ['Not enough relevant experience', 'Skills do not match the role', 'Salary or notice period', 'Location']
 
 const fieldClass =
-  'min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-base'
+  'min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-base'
 
 export function CandidateDecision({ requisitionId, candidateId, actions }: { requisitionId: string; candidateId: string; actions: ClientAction[] }) {
   const router = useRouter()
@@ -42,9 +42,9 @@ export function CandidateDecision({ requisitionId, candidateId, actions }: { req
   if (actions.length === 0) return null
 
   return (
-    <section aria-label="Your decision" className="flex flex-col gap-2 pb-4">
+    <section aria-label="Your decision" className="flex flex-col gap-4 pb-8">
       {mode === null && (
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-4 sm:flex-row">
           {actions.includes('shortlist') && (
             <Button size="lg" className="min-h-11 flex-1" disabled={pending} onClick={() => run(() => shortlistCandidate(ids))}>
               {pending ? 'Saving…' : 'Shortlist'}
@@ -65,24 +65,24 @@ export function CandidateDecision({ requisitionId, candidateId, actions }: { req
 
       {mode === 'reject' && (
         <form
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault()
             run(() => rejectCandidate({ ...ids, reason }))
           }}
         >
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-2 text-sm">
             Reason for rejecting (shared with your recruiter)
             <textarea className={`${fieldClass} min-h-24`} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
           </label>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-2">
             {REASONS.map((r) => (
-              <button key={r} type="button" className="min-h-9 rounded-full border border-[var(--color-border)] px-2 text-sm" onClick={() => setReason(r)}>
+              <button key={r} type="button" className="min-h-9 rounded-full border border-[var(--color-border)] px-4 text-sm" onClick={() => setReason(r)}>
                 {r}
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <Button type="submit" className="min-h-11 flex-1" disabled={pending || reason.trim().length < 3}>
               {pending ? 'Saving…' : 'Confirm rejection'}
             </Button>
@@ -95,18 +95,18 @@ export function CandidateDecision({ requisitionId, candidateId, actions }: { req
 
       {mode === 'slot' && (
         <form
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault()
             // datetime-local has no zone; the portal works in India Standard Time.
             run(() => proposeInterview({ ...ids, slot: `${slot}:00+05:30` }))
           }}
         >
-          <label className="flex flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-2 text-sm">
             Proposed date and time (IST)
             <input type="datetime-local" className={fieldClass} value={slot} onChange={(e) => setSlot(e.target.value)} required />
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <Button type="submit" className="min-h-11 flex-1" disabled={pending || !slot}>
               {pending ? 'Saving…' : 'Send proposal'}
             </Button>

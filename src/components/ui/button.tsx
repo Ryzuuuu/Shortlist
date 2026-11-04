@@ -18,10 +18,11 @@ export const buttonVariants = cva(
         link: 'text-[var(--color-accent)] underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4',
+        // Phones get 40-44px tap targets; denser sizes apply from the sm breakpoint up.
+        sm: 'h-8 max-sm:h-10 px-4 text-xs',
+        md: 'h-10 max-sm:h-11 px-4',
         lg: 'h-12 px-6 text-base',
-        icon: 'h-10 w-10',
+        icon: 'h-10 w-10 max-sm:h-11 max-sm:w-11',
       },
     },
     defaultVariants: {

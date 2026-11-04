@@ -19,7 +19,8 @@
     "db:seed": "tsx --env-file=.env.local scripts/seed/seed.ts",
     "seed:cvs": "tsx scripts/seed/generate.ts",
     "db:migrate": "drizzle-kit migrate",
-    "db:reextract": "tsx --env-file=.env.local scripts/maintenance/reextract.ts"
+    "db:reextract": "tsx --env-file=.env.local scripts/maintenance/reextract.ts",
+    "db:rescore": "tsx --env-file=.env.local scripts/maintenance/rescore.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

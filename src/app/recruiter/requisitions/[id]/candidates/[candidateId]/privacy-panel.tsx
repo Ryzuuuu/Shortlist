@@ -34,9 +34,9 @@ export function PrivacyPanel(p: Props) {
   }
 
   return (
-    <section aria-label="Consent and privacy" className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-sm">
-      <h2 className="mb-1 font-sans text-sm font-medium">Consent and privacy</h2>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+    <section aria-label="Consent and privacy" className="mt-8 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm">
+      <h2 className="mb-2 font-sans text-sm font-medium">Consent and privacy</h2>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         <dt className="text-[var(--color-muted)]">Purpose</dt>
         <dd>{p.consentPurpose === 'hiring_evaluation' ? 'Hiring evaluation only' : p.consentPurpose}</dd>
         <dt className="text-[var(--color-muted)]">Recorded</dt>
@@ -46,15 +46,15 @@ export function PrivacyPanel(p: Props) {
       </dl>
 
       {!confirming ? (
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => setConfirming(true)}>
+        <Button variant="outline" size="sm" className="mt-4" onClick={() => setConfirming(true)}>
           Delete candidate data (on request)
         </Button>
       ) : (
-        <div className="mt-2 flex flex-col gap-1" role="alertdialog" aria-label="Confirm deletion">
+        <div className="mt-4 flex flex-col gap-2" role="alertdialog" aria-label="Confirm deletion">
           <p>
             This permanently deletes the profile, the CV files and the AI results for this candidate, in every requisition. It cannot be undone. Only an anonymised log entry remains.
           </p>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <Button size="sm" onClick={remove} disabled={pending}>
               {pending ? 'Deleting…' : 'Delete permanently'}
             </Button>
@@ -65,7 +65,7 @@ export function PrivacyPanel(p: Props) {
         </div>
       )}
       {error && (
-        <p role="alert" className="mt-1 text-[var(--color-error)]">
+        <p role="alert" className="mt-2 text-[var(--color-error)]">
           {error}
         </p>
       )}

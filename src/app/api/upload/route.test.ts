@@ -125,6 +125,22 @@ describe('POST /api/upload: accepted files', () => {
     expect(m.processCvFile).not.toHaveBeenCalled()
   })
 
+  it('re-processes a file abandoned mid-processing, but not one that is still being processed', async () => {
+    const old = new Date(Date.now() - 10 * 60 * 1000)
+    m.selects = [[{ id: 'req-1' }], [{ id: 'file-9', status: 'parsing', updatedAt: old }]]
+    const res = await POST(upload(pdf()))
+    expect(res.status).toBe(201)
+    expect(m.processCvFile).toHaveBeenCalledWith('file-9')
+
+    vi.clearAllMocks()
+    m.putFile.mockResolvedValue('local:file-1')
+    m.processCvFile.mockResolvedValue('scored')
+    m.selects = [[{ id: 'req-1' }], [{ id: 'file-9', status: 'parsing', updatedAt: new Date() }]]
+    const busy = await POST(upload(pdf()))
+    expect(await busy.json()).toMatchObject({ id: 'file-9', duplicate: true })
+    expect(m.processCvFile).not.toHaveBeenCalled()
+  })
+
   it('re-processes a previously failed file instead of ignoring it', async () => {
     m.selects = [[{ id: 'req-1' }], [{ id: 'file-9', status: 'failed' }]]
     const res = await POST(upload(pdf()))

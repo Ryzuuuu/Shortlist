@@ -23,7 +23,7 @@ export function Toast({ message, variant = 'default', onDismiss }: ToastProps) {
       role="status"
       aria-live="polite"
       className={cn(
-        'flex items-center justify-between gap-4 rounded-[var(--radius-md)] px-4 py-3 text-sm shadow-[var(--shadow-md)]',
+        'flex items-center justify-between gap-4 rounded-[var(--radius-md)] px-4 py-4 text-sm shadow-[var(--shadow-md)]',
         variantStyles[variant],
       )}
     >

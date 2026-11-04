@@ -377,8 +377,8 @@ function extractLocation(text: string): string | null {
 function fallbackCurrent(all: string[]): { role: string | null; company: string | null } {
   for (const line of all) {
     if (line.length > 100 || !ROLE_WORDS.test(line)) continue
-    const m = line.match(/^(.+?)\s+(?:at|@|,|-|–|\|)\s+(.+)$/i)
-    if (m?.[1] && m[2] && ROLE_WORDS.test(m[1])) return { role: clean(m[1]), company: clean(m[2]) }
+    const found = splitRoleCompany(line)
+    if (found) return found
   }
   return { role: null, company: null }
 }

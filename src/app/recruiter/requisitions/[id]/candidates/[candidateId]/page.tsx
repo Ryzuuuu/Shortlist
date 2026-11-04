@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { and, eq } from 'drizzle-orm'
-import { can } from '@shortlist/core'
+import { can, evaluateFilters } from '@shortlist/core'
 import { db } from '@/db'
 import { candidates, scores } from '@/db/schema'
 import type { CandidateProfile } from '@/db/types'
 import { requireStaff } from '@/lib/session'
-import { getLatestScorecard, getRequisition, type CriterionResult } from '@/lib/queries/recruiter'
+import { getLatestScorecard, getRequisition, profileFacts, type CriterionResult } from '@/lib/queries/recruiter'
 import { CandidateReview } from './candidate-review'
 import { PrivacyPanel } from './privacy-panel'
 import { loadReviewState } from './review-state'
@@ -30,7 +30,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <p className="mb-1 text-sm text-[var(--color-muted)]">
+      <p className="mb-2 text-sm text-[var(--color-muted)]">
         <Link href={`/recruiter/requisitions/${id}`} className="hover:underline">
           ← {requisition.title}
         </Link>
@@ -50,6 +50,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
         criteria={scorecard.criteria.map((c) => ({ id: c.id, label: c.label, mustHave: c.mustHave }))}
         initialOpened={state.opened}
         stage={state.stage}
+        checks={evaluateFilters(scorecard.filters, profileFacts(profile))}
       />
       <PrivacyPanel
         requisitionId={id}

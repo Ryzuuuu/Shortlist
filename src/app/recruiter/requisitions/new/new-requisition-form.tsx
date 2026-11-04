@@ -8,7 +8,7 @@ import { createRequisition, suggestScorecard, type DraftScorecard } from '../act
 type Criterion = DraftScorecard['criteria'][number]
 
 const fieldClass =
-  'w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm'
+  'w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm'
 
 export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; name: string }> }) {
   const router = useRouter()
@@ -48,13 +48,13 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-3">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
+    <div className="flex max-w-3xl flex-col gap-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="flex flex-col gap-2 text-sm">
           Title
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Senior Java Developer (Noida)" />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-2 text-sm">
           Client
           <select className={fieldClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
             {clients.map((c) => (
@@ -66,7 +66,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-2 text-sm">
         Job description
         <textarea className={`${fieldClass} min-h-40`} value={jd} onChange={(e) => setJd(e.target.value)} />
       </label>
@@ -84,9 +84,9 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
           <CardHeader>
             <CardTitle>Scorecard</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+          <CardContent className="flex flex-col gap-6">
             {draft.filters.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-[var(--color-muted)]">Filters read from the JD:</span>
                 {draft.filters.map((f) => (
                   <Badge key={f.id} variant="outline">
@@ -94,7 +94,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
                     <button
                       type="button"
                       aria-label={`Remove filter ${f.label}`}
-                      className="ml-1"
+                      className="ml-2"
                       onClick={() => setDraft({ ...draft, filters: draft.filters.filter((x) => x.id !== f.id) })}
                     >
                       ×
@@ -104,14 +104,14 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
               </div>
             )}
 
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-4">
               {draft.criteria.map((c) => (
-                <li key={c.id} className="grid gap-1 border-b border-[var(--color-border)] pb-2 sm:grid-cols-[1fr_96px_auto_auto] sm:items-center">
-                  <div className="flex flex-col gap-1">
+                <li key={c.id} className="grid gap-2 border-b border-[var(--color-border)] pb-4 sm:grid-cols-[1fr_96px_auto_auto] sm:items-center">
+                  <div className="flex flex-col gap-2">
                     <Input aria-label="Criterion name" value={c.label} onChange={(e) => update(c.id, { label: e.target.value })} />
                     <Input aria-label="What to look for" value={c.description} onChange={(e) => update(c.id, { description: e.target.value })} />
                   </div>
-                  <label className="flex items-center gap-1 text-sm">
+                  <label className="flex items-center gap-2 text-sm">
                     <Input
                       aria-label="Weight percent"
                       type="number"
@@ -122,7 +122,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
                     />
                     %
                   </label>
-                  <label className="flex items-center gap-1 text-sm">
+                  <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={c.mustHave} onChange={(e) => update(c.id, { mustHave: e.target.checked })} />
                     Must have
                   </label>
@@ -137,7 +137,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
               ))}
             </ul>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -165,7 +165,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
       )}
 
       {draft && (
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Button onClick={create} disabled={pending || title.trim().length < 2}>
             {pending ? 'Creating…' : 'Create requisition'}
           </Button>

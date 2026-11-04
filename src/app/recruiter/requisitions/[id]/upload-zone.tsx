@@ -105,7 +105,7 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
   const failedCount = items.filter((i) => i.status === 'failed').length
 
   return (
-    <section aria-label="Upload CVs" className="mb-4">
+    <section aria-label="Upload CVs" className="mb-8">
       <div
         onDragOver={(e) => {
           e.preventDefault()
@@ -117,7 +117,7 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
           setOver(false)
           if (!running) addFiles(e.dataTransfer.files)
         }}
-        className={`flex flex-col items-center gap-1 rounded-[var(--radius-lg)] border border-dashed px-3 py-4 text-center ${
+        className={`flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border border-dashed px-6 py-8 text-center ${
           over ? 'border-[var(--color-accent)] bg-[var(--color-surface)]' : 'border-[var(--color-border)]'
         }`}
       >
@@ -132,8 +132,8 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
       </div>
 
       {items.length > 0 && (
-        <div className="mt-2" aria-live="polite">
-          <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+        <div className="mt-4" aria-live="polite">
+          <div className="mb-2 flex items-center justify-between gap-4 text-sm">
             <span>
               {done} of {items.length} processed
             </span>
@@ -145,7 +145,7 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
           </div>
           <ul className="max-h-64 divide-y divide-[var(--color-border)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
             {items.map((i) => (
-              <li key={i.key} className="flex items-center justify-between gap-2 px-2 py-1 text-sm">
+              <li key={i.key} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
                 <span className="min-w-0">
                   <span className="block truncate">{i.file.name}</span>
                   {i.message && <span className="block text-xs text-[var(--color-muted)]">{i.message}</span>}

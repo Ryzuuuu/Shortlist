@@ -12,7 +12,7 @@ export default async function RequisitionsPage() {
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-3xl">Requisitions</h1>
         <ButtonLink href="/recruiter/requisitions/new">New requisition</ButtonLink>
       </div>
@@ -31,7 +31,7 @@ export default async function RequisitionsPage() {
             <li key={r.id}>
               <Link
                 href={`/recruiter/requisitions/${r.id}`}
-                className="flex items-center justify-between gap-2 px-2 py-2 hover:bg-[var(--color-bg)]"
+                className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-[var(--color-bg)]"
               >
                 <span>
                   <span className="block font-medium">{r.title}</span>

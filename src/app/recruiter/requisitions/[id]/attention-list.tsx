@@ -35,18 +35,18 @@ export function AttentionList({ files }: { files: FileRow[] }) {
   }
 
   return (
-    <section aria-label="Needs attention" className="mb-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-      <h2 className="border-b border-[var(--color-border)] px-2 py-1 font-sans text-sm font-medium">
+    <section aria-label="Needs attention" className="mb-8 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <h2 className="border-b border-[var(--color-border)] px-4 py-2 font-sans text-sm font-medium">
         Needs your attention ({files.length})
       </h2>
       <ul className="divide-y divide-[var(--color-border)]">
         {files.map((f) => (
-          <li key={f.id} className="flex items-center justify-between gap-2 px-2 py-1 text-sm">
+          <li key={f.id} className="flex items-center justify-between gap-4 px-4 py-2 text-sm">
             <span className="min-w-0">
               <span className="block truncate">{f.filename}</span>
               {f.message && <span className="block text-xs text-[var(--color-muted)]">{f.message}</span>}
             </span>
-            <span className="flex shrink-0 items-center gap-1">
+            <span className="flex shrink-0 items-center gap-2">
               <Badge variant={f.status === 'failed' ? 'error' : 'warning'}>{f.status === 'failed' ? 'Failed' : 'Needs review'}</Badge>
               <Button size="sm" variant="outline" disabled={busy === f.id} onClick={() => retry(f.id)}>
                 {busy === f.id ? 'Retrying…' : 'Retry'}
@@ -56,7 +56,7 @@ export function AttentionList({ files }: { files: FileRow[] }) {
         ))}
       </ul>
       {error && (
-        <p role="alert" className="px-2 py-1 text-sm text-[var(--color-error)]">
+        <p role="alert" className="px-4 py-2 text-sm text-[var(--color-error)]">
           {error}
         </p>
       )}

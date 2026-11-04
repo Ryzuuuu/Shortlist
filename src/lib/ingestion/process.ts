@@ -25,7 +25,7 @@ import {
   type ExtractedProfile,
 } from '@shortlist/core'
 import { db } from '@/db'
-import { candidates, cvFiles, pipelineEntries, scorecards, scores } from '@/db/schema'
+import { aiReviewSamples, candidates, cvFiles, pipelineEntries, scorecards, scores } from '@/db/schema'
 import type { CandidateProfile, ScorecardCriterion } from '@/db/types'
 import { getLLMProvider, isVisionCapable, scoreWithCache } from '@/lib/llm'
 import { LLMRefusalError } from '@/lib/llm/shared'
@@ -138,6 +138,89 @@ async function resolveConcurrentDuplicate(candidateId: string, incoming: DedupCa
   return match.candidateId
 }
 
+export type ScoreOutcome = { kind: 'no_scorecard' } | { kind: 'scored'; lowConfidence: boolean }
+
+/**
+ * Scores one candidate against the requisition's latest scorecard and stores the
+ * result. Used for every upload and by the re-score maintenance command, so both
+ * apply exactly the same rules. `replace` discards an earlier score for the same
+ * scorecard first (and the cached model answer), instead of keeping it.
+ */
+export async function scoreCandidate(
+  candidateId: string,
+  requisitionId: string,
+  fallback: { text: string; hash: string },
+  options: { replace?: boolean } = {},
+): Promise<ScoreOutcome> {
+  const [scorecard] = await db
+    .select()
+    .from(scorecards)
+    .where(eq(scorecards.requisitionId, requisitionId))
+    .orderBy(desc(scorecards.version))
+    .limit(1)
+  if (!scorecard) return { kind: 'no_scorecard' }
+
+  const [cand] = await db
+    .select({ rawText: candidates.rawText, contentHash: candidates.contentHash })
+    .from(candidates)
+    .where(eq(candidates.id, candidateId))
+    .limit(1)
+  const sourceText = cand?.rawText ?? fallback.text
+  const hash = cand?.contentHash ?? fallback.hash
+  const criteria = scorecard.criteria as ScorecardCriterion[]
+
+  if (options.replace) {
+    await db.delete(aiReviewSamples).where(and(eq(aiReviewSamples.contentHash, hash), eq(aiReviewSamples.scorecardId, scorecard.id)))
+    await db.delete(scores).where(and(eq(scores.candidateId, candidateId), eq(scores.requisitionId, requisitionId), eq(scores.scorecardId, scorecard.id)))
+  }
+
+  // AI rule 3: only redacted text ever reaches the model.
+  const { redactedText } = redact(sourceText)
+  const response = await scoreWithCache(hash, scorecard.id, { redactedText, criteria, cacheKey: `${hash}:${scorecard.version}` })
+
+  // AI rule 2: verify every quote against the original CV text; drop unverifiable evidence.
+  const perCriterion = response.criteria.map((r) => {
+    const hasClaim = r.met === 'yes' || r.met === 'partial'
+    // The reader saw redacted text; keep only a part of its quote that truly exists in the CV.
+    const quote = salvageQuote(r.quote, sourceText)
+    const verified = quote !== null && verifyQuote(quote, sourceText).verified
+    const unverified = hasClaim && !verified
+    return {
+      criterionId: r.criterionId,
+      met: r.met,
+      // A claim without verifiable evidence counts as unknown and shows no quote.
+      effectiveMet: unverified ? ('unknown' as const) : r.met,
+      quote: verified ? quote : null,
+      confidence: r.confidence,
+      evidenceStatus: unverified ? ('unverified' as const) : verified ? ('verified' as const) : ('none' as const),
+    }
+  })
+
+  // AI rule 1: the total is computed here, from the scorecard weights, never by the model.
+  const result = calculateScore(
+    criteria.map((c) => ({ id: c.id, weight: c.weight, mustHave: c.mustHave })),
+    perCriterion.map((r) => ({ criterionId: r.criterionId, met: r.effectiveMet, verified: r.evidenceStatus === 'verified' })),
+  )
+
+  await db
+    .insert(scores)
+    .values({
+      id: createId(),
+      candidateId,
+      requisitionId,
+      scorecardId: scorecard.id,
+      perCriterion,
+      total: result.total,
+      isBelowFit: result.isBelowFit,
+      llmProvider: response.provider,
+      fromCache: response.fromCache,
+    })
+    .onConflictDoNothing()
+
+  const meanConfidence = perCriterion.length === 0 ? 0 : perCriterion.reduce((sum, r) => sum + r.confidence, 0) / perCriterion.length
+  return { kind: 'scored', lowConfidence: meanConfidence < LOW_CONFIDENCE_THRESHOLD }
+}
+
 export async function processCvFile(fileId: string): Promise<ProcessOutcome> {
   const [file] = await db.select().from(cvFiles).where(eq(cvFiles.id, fileId)).limit(1)
   if (!file) throw new Error(`cv_file ${fileId} not found`)
@@ -222,74 +305,14 @@ export async function processCvFile(fileId: string): Promise<ProcessOutcome> {
       .onConflictDoNothing()
 
     // ── Score against the latest scorecard ─────────────────────────────────
-    const [scorecard] = await db
-      .select()
-      .from(scorecards)
-      .where(eq(scorecards.requisitionId, file.requisitionId))
-      .orderBy(desc(scorecards.version))
-      .limit(1)
-
-    if (!scorecard) {
+    const outcome = await scoreCandidate(candidateId, file.requisitionId, { text, hash: parsed.contentHash })
+    if (outcome.kind === 'no_scorecard') {
       await setStatus(fileId, 'needs_review', { isScanned, candidateId, errorMessage: 'No scorecard for this requisition yet.' })
       return 'needs_review'
     }
 
-    const [cand] = await db
-      .select({ rawText: candidates.rawText, contentHash: candidates.contentHash })
-      .from(candidates)
-      .where(eq(candidates.id, candidateId))
-      .limit(1)
-    const sourceText = cand?.rawText ?? text
-    const hash = cand?.contentHash ?? parsed.contentHash
-    const criteria = scorecard.criteria as ScorecardCriterion[]
-
-    // AI rule 3: only redacted text ever reaches the model.
-    const { redactedText } = redact(sourceText)
-    const response = await scoreWithCache(hash, scorecard.id, { redactedText, criteria, cacheKey: `${hash}:${scorecard.version}` })
-
-    // AI rule 2: verify every quote against the original CV text; drop unverifiable evidence.
-    const perCriterion = response.criteria.map((r) => {
-      const hasClaim = r.met === 'yes' || r.met === 'partial'
-      // The reader saw redacted text; keep only a part of its quote that truly exists in the CV.
-      const quote = salvageQuote(r.quote, sourceText)
-      const verified = quote !== null && verifyQuote(quote, sourceText).verified
-      const unverified = hasClaim && !verified
-      return {
-        criterionId: r.criterionId,
-        met: r.met,
-        // A claim without verifiable evidence counts as unknown and shows no quote.
-        effectiveMet: unverified ? ('unknown' as const) : r.met,
-        quote: verified ? quote : null,
-        confidence: r.confidence,
-        evidenceStatus: unverified ? ('unverified' as const) : verified ? ('verified' as const) : ('none' as const),
-      }
-    })
-
-    // AI rule 1: the total is computed here, from the scorecard weights, never by the model.
-    const result = calculateScore(
-      criteria.map((c) => ({ id: c.id, weight: c.weight, mustHave: c.mustHave })),
-      perCriterion.map((r) => ({ criterionId: r.criterionId, met: r.effectiveMet, verified: r.evidenceStatus === 'verified' })),
-    )
-
-    await db
-      .insert(scores)
-      .values({
-        id: createId(),
-        candidateId,
-        requisitionId: file.requisitionId,
-        scorecardId: scorecard.id,
-        perCriterion,
-        total: result.total,
-        isBelowFit: result.isBelowFit,
-        llmProvider: response.provider,
-        fromCache: response.fromCache,
-      })
-      .onConflictDoNothing()
-
-    const meanConfidence = perCriterion.length === 0 ? 0 : perCriterion.reduce((s, r) => s + r.confidence, 0) / perCriterion.length
-
     // AI rule 5: low confidence is surfaced for a person, never silently accepted.
-    if (meanConfidence < LOW_CONFIDENCE_THRESHOLD) {
+    if (outcome.lowConfidence) {
       await setStatus(fileId, 'needs_review', { isScanned, candidateId, errorMessage: 'Low AI confidence. Review manually.' })
       return 'needs_review'
     }

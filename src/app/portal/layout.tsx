@@ -11,7 +11,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-dvh">
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-2 py-2">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-4">
           <Link href="/portal" className="font-serif text-xl">
             Shortlist
           </Link>
@@ -20,7 +20,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </Suspense>
         </div>
       </header>
-      <main className="mx-auto max-w-2xl px-2 py-3">{children}</main>
+      <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
     </div>
   )
 }

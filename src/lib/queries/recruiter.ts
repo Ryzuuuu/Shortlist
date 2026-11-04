@@ -5,9 +5,11 @@
  * `can()`; these functions do not authorise.
  */
 import { and, count, desc, eq, inArray } from 'drizzle-orm'
+import { evaluateFilters, type FilterCheck, type PipelineStage } from '@shortlist/core'
 import { db } from '@/db'
 import { candidates, clients, cvFiles, pipelineEntries, requisitions, scorecards, scores, submissions } from '@/db/schema'
 import type { CandidateProfile, ScorecardCriterion } from '@/db/types'
+import { isStaleProcessing } from '@/lib/ingestion/constants'
 
 export interface RequisitionRow {
   id: string
@@ -44,9 +46,16 @@ export async function getRequisition(id: string) {
   return row ?? null
 }
 
+export interface ScorecardFilter {
+  id: string
+  label: string
+  type: string
+  value: unknown
+}
+
 export async function getLatestScorecard(requisitionId: string) {
   const [row] = await db.select().from(scorecards).where(eq(scorecards.requisitionId, requisitionId)).orderBy(desc(scorecards.version)).limit(1)
-  return row ? { ...row, criteria: row.criteria as ScorecardCriterion[] } : null
+  return row ? { ...row, criteria: row.criteria as ScorecardCriterion[], filters: (row.filters ?? []) as ScorecardFilter[] } : null
 }
 
 /** One stored per-criterion result, as written by the ingestion pipeline. */
@@ -60,40 +69,142 @@ export interface CriterionResult {
   evidenceStatus: 'verified' | 'unverified' | 'none'
 }
 
+export function profileFacts(p: CandidateProfile) {
+  return { experienceYears: p.experienceYears ?? null, noticeDays: p.noticeDays ?? null, ctcLpa: p.ctcLpa ?? null, location: p.location }
+}
+
 export interface RankedRow {
+  candidateId: string
+  name: string
+  headline: string
+  skills: string[]
+  total: number
+  isBelowFit: boolean
+  stage: string
+  opened: boolean
+  needsReview: boolean
+  /** JD filters compared with what the CV states. Labels only; they never hide anyone. */
+  checks: FilterCheck[]
+  results: CriterionResult[]
+}
+
+/**
+ * All scored candidates for a requisition, best first. Below-fit stay in the list
+ * (AI rule 4). Equal scores are ordered by how many JD filters are missed, then met.
+ */
+export async function getRanking(requisitionId: string, filters: ScorecardFilter[] = []): Promise<RankedRow[]> {
+  const [rows, reviewFiles] = await Promise.all([
+    db
+      .select({
+        candidateId: scores.candidateId,
+        total: scores.total,
+        isBelowFit: scores.isBelowFit,
+        perCriterion: scores.perCriterion,
+        profile: candidates.profile,
+        stage: pipelineEntries.stage,
+        viewedAt: submissions.viewedByRecruiterAt,
+      })
+      .from(scores)
+      .innerJoin(candidates, eq(candidates.id, scores.candidateId))
+      .leftJoin(
+        pipelineEntries,
+        and(eq(pipelineEntries.candidateId, scores.candidateId), eq(pipelineEntries.requisitionId, scores.requisitionId)),
+      )
+      .leftJoin(
+        submissions,
+        and(eq(submissions.candidateId, scores.candidateId), eq(submissions.requisitionId, scores.requisitionId)),
+      )
+      .where(eq(scores.requisitionId, requisitionId))
+      .orderBy(desc(scores.total)),
+    db
+      .select({ candidateId: cvFiles.candidateId })
+      .from(cvFiles)
+      .where(and(eq(cvFiles.requisitionId, requisitionId), eq(cvFiles.status, 'needs_review'))),
+  ])
+  const needsReview = new Set(reviewFiles.map((f) => f.candidateId).filter((id): id is string => !!id))
+
+  const ranked = rows.map((r): RankedRow => {
+    const p = r.profile as CandidateProfile
+    return {
+      candidateId: r.candidateId,
+      name: `${p.firstName} ${p.lastName}`.trim() || 'Unnamed candidate',
+      headline: p.headline || p.currentRole || '',
+      skills: p.skills ?? [],
+      total: r.total,
+      isBelowFit: r.isBelowFit,
+      stage: r.stage ?? 'sourced',
+      opened: r.viewedAt != null,
+      needsReview: needsReview.has(r.candidateId),
+      checks: evaluateFilters(filters, profileFacts(p)),
+      results: r.perCriterion as CriterionResult[],
+    }
+  })
+
+  const misses = (r: RankedRow) => r.checks.filter((c) => c.status === 'misses').length
+  const meets = (r: RankedRow) => r.checks.filter((c) => c.status === 'meets').length
+  return ranked.sort((a, b) => b.total - a.total || misses(a) - misses(b) || meets(b) - meets(a) || a.name.localeCompare(b.name))
+}
+
+export interface AttentionFile {
+  id: string
+  filename: string
+  status: string
+  message: string | null
+  isScanned: boolean
+}
+
+/**
+ * Files that need a person: failed, flagged for review, or abandoned mid-processing.
+ * Nothing is ever silently dropped (AI rule 5).
+ */
+export async function getAttentionFiles(requisitionId: string): Promise<AttentionFile[]> {
+  const rows = await db
+    .select({
+      id: cvFiles.id,
+      filename: cvFiles.originalFilename,
+      status: cvFiles.status,
+      message: cvFiles.errorMessage,
+      isScanned: cvFiles.isScanned,
+      updatedAt: cvFiles.updatedAt,
+    })
+    .from(cvFiles)
+    .where(and(eq(cvFiles.requisitionId, requisitionId), inArray(cvFiles.status, ['failed', 'needs_review', 'parsing', 'pending'])))
+    .orderBy(desc(cvFiles.updatedAt))
+
+  return rows
+    .filter((r) => r.status === 'failed' || r.status === 'needs_review' || isStaleProcessing(r.status, r.updatedAt))
+    .map((r) =>
+      r.status === 'parsing' || r.status === 'pending'
+        ? { id: r.id, filename: r.filename, status: 'failed', message: 'Processing did not finish (it timed out or was interrupted). Retry.', isScanned: r.isScanned }
+        : { id: r.id, filename: r.filename, status: r.status, message: r.message, isScanned: r.isScanned },
+    )
+}
+
+export interface PipelineCard {
   candidateId: string
   name: string
   headline: string
   total: number
   isBelowFit: boolean
-  stage: string
-  opened: boolean
-  results: CriterionResult[]
+  stage: PipelineStage
+  rejectionReason: string | null
 }
 
-/** All scored candidates for a requisition, best first. Below-fit stay in the list (AI rule 4). */
-export async function getRanking(requisitionId: string): Promise<RankedRow[]> {
+/** Every candidate in a requisition with their stage, for the pipeline board. */
+export async function getPipeline(requisitionId: string): Promise<PipelineCard[]> {
   const rows = await db
     .select({
-      candidateId: scores.candidateId,
+      candidateId: pipelineEntries.candidateId,
+      stage: pipelineEntries.stage,
+      rejectionReason: pipelineEntries.rejectionReason,
+      profile: candidates.profile,
       total: scores.total,
       isBelowFit: scores.isBelowFit,
-      perCriterion: scores.perCriterion,
-      profile: candidates.profile,
-      stage: pipelineEntries.stage,
-      viewedAt: submissions.viewedByRecruiterAt,
     })
-    .from(scores)
-    .innerJoin(candidates, eq(candidates.id, scores.candidateId))
-    .leftJoin(
-      pipelineEntries,
-      and(eq(pipelineEntries.candidateId, scores.candidateId), eq(pipelineEntries.requisitionId, scores.requisitionId)),
-    )
-    .leftJoin(
-      submissions,
-      and(eq(submissions.candidateId, scores.candidateId), eq(submissions.requisitionId, scores.requisitionId)),
-    )
-    .where(eq(scores.requisitionId, requisitionId))
+    .from(pipelineEntries)
+    .innerJoin(candidates, eq(candidates.id, pipelineEntries.candidateId))
+    .leftJoin(scores, and(eq(scores.candidateId, pipelineEntries.candidateId), eq(scores.requisitionId, pipelineEntries.requisitionId)))
+    .where(eq(pipelineEntries.requisitionId, requisitionId))
     .orderBy(desc(scores.total))
 
   return rows.map((r) => {
@@ -102,20 +213,10 @@ export async function getRanking(requisitionId: string): Promise<RankedRow[]> {
       candidateId: r.candidateId,
       name: `${p.firstName} ${p.lastName}`.trim() || 'Unnamed candidate',
       headline: p.headline || p.currentRole || '',
-      total: r.total,
-      isBelowFit: r.isBelowFit,
-      stage: r.stage ?? 'sourced',
-      opened: r.viewedAt != null,
-      results: r.perCriterion as CriterionResult[],
+      total: r.total ?? 0,
+      isBelowFit: r.isBelowFit ?? false,
+      stage: r.stage as PipelineStage,
+      rejectionReason: r.rejectionReason,
     }
   })
-}
-
-/** Files that need a human: failed or flagged for review. Never silently dropped (AI rule 5). */
-export async function getAttentionFiles(requisitionId: string) {
-  return db
-    .select({ id: cvFiles.id, filename: cvFiles.originalFilename, status: cvFiles.status, message: cvFiles.errorMessage, isScanned: cvFiles.isScanned })
-    .from(cvFiles)
-    .where(and(eq(cvFiles.requisitionId, requisitionId), inArray(cvFiles.status, ['failed', 'needs_review'])))
-    .orderBy(desc(cvFiles.updatedAt))
 }

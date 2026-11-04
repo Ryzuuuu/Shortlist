@@ -54,6 +54,9 @@ export interface ClientCandidateView {
   headline: string
   location: string | null
   skills: string[]
+  /** Stated or computed from the CV; null when unknown. Expected CTC is deliberately not shared with clients. */
+  experienceYears: number | null
+  noticeDays: number | null
   stage: PipelineStage
   total: number
   recruiterNote: string | null
@@ -120,6 +123,8 @@ export async function getPortalCandidates(requisitionId: string, clientId: strin
       headline: p.headline || p.currentRole || '',
       location: p.location,
       skills: p.skills,
+      experienceYears: p.experienceYears ?? null,
+      noticeDays: p.noticeDays ?? null,
       stage,
       total: r.total,
       recruiterNote: r.note,

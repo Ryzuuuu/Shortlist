@@ -25,8 +25,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <h1 className="mb-1 text-3xl">Audit log</h1>
-      <p className="mb-3 max-w-xl text-[var(--color-muted)]">Who viewed or changed which candidate, and when. Deleted candidates appear without a name.</p>
+      <h1 className="mb-2 text-3xl">Audit log</h1>
+      <p className="mb-6 max-w-xl text-[var(--color-muted)]">Who viewed or changed which candidate, and when. Deleted candidates appear without a name.</p>
 
       {rows.length === 0 ? (
         <EmptyState title="Nothing logged yet" description="Views, submissions, client decisions and deletions appear here as they happen." />
@@ -58,7 +58,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               </TableBody>
             </Table>
           </div>
-          <nav className="mt-2 flex items-center justify-between text-sm" aria-label="Pagination">
+          <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Pagination">
             {page > 0 ? (
               <ButtonLink variant="outline" size="sm" href={`/delivery/audit?page=${page - 1}`}>
                 Newer
@@ -74,7 +74,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           </nav>
         </>
       )}
-      <p className="mt-3 text-sm text-[var(--color-muted)]">
+      <p className="mt-6 text-sm text-[var(--color-muted)]">
         <Link href="/recruiter" className="hover:underline">
           ← Back to requisitions
         </Link>
