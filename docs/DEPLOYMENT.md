@@ -26,7 +26,7 @@ Target: Vercel (app) + Neon (Postgres) + Vercel Blob (CV files). `vercel.json` p
 | `LLM_PROVIDER` | no | `heuristic` (default), `anthropic`, `gemini` |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | only for that provider | A missing key falls back to `heuristic` |
 | `AUDIT_HASH_KEY` | recommended | Keys the anonymised ID kept after a deletion. Falls back to `BETTER_AUTH_SECRET`. Do not rotate it after deletions have happened or earlier stubs stop matching |
-| `SEED_PASSWORD` | seeding only | Password for the demo accounts |
+| `SEED_PASSWORD` | seeding only | Password for the demo accounts. Required, 12+ characters, no default |
 
 Set these in Vercel, Project Settings, Environment Variables (mark secrets as Sensitive; they then cannot be read back). `.env*` files are git-ignored (only `.env.example`, which holds no secrets, is tracked).
 

@@ -48,7 +48,7 @@ npm run dev
 
 The seed loads a demo client, a requisition with a scorecard, and 44 synthetic CVs (including 2 duplicates, 1 scan and 1 corrupt file)
 through the real pipeline. Demo logins: `recruiter@shortlist.test`, `client.meridian@shortlist.test`, `head@shortlist.test`.
-The password is `SEED_PASSWORD` if set, otherwise the default in `scripts/seed/seed.ts`. The same CVs are in `seed/cvs/` for trying the upload screen by hand.
+The password is whatever you set in `SEED_PASSWORD` (required, 12+ characters; there is deliberately no default because this repository is public). The same CVs are in `seed/cvs/` for trying the upload screen by hand.
 
 A committed `.npmrc` sets `legacy-peer-deps` because `vitest` and `@types/node@20` have conflicting peer ranges; without it a plain `npm install` fails with ERESOLVE (`npm ci` is unaffected).
 

@@ -6,20 +6,25 @@
  * pipeline with the local heuristic provider, so scores are precomputed with
  * no API key, then moves the top candidates along the pipeline for the demo.
  *
- * Demo accounts (local/demo use only): password comes from SEED_PASSWORD.
+ * Demo accounts (local/demo use only): the password comes from SEED_PASSWORD, which is required.
  */
 import { and, desc, eq } from 'drizzle-orm'
 import { createId } from '@paralleldrive/cuid2'
 import { db } from '@/db'
 import { hashPassword } from 'better-auth/crypto'
 import { accounts, clients, cvFiles, pipelineEntries, requisitions, scorecards, scores, submissions, users } from '@/db/schema'
-import type { ScorecardCriterion } from '@/db/types'
 import { computeHash } from '@/lib/ingestion/parse'
 import { processCvFile } from '@/lib/ingestion/process'
 import { putFile } from '@/lib/ingestion/storage'
 import { buildSeedCvs } from './cv-data'
+import { CRITERIA_A, FILTERS_A, JD_A } from './scorecard'
 
-const PASSWORD = process.env.SEED_PASSWORD ?? 'demo-password-123'
+// No default on purpose: this repository is public, so a built-in password would be a known credential.
+const PASSWORD = process.env.SEED_PASSWORD ?? ''
+if (PASSWORD.length < 12) {
+  console.error('SEED_PASSWORD must be set to a strong value (12+ characters) to create the demo accounts.')
+  process.exit(1)
+}
 
 const IDS = {
   clientA: 'seed-client-meridian',
@@ -30,23 +35,6 @@ const IDS = {
   scB: 'seed-sc-retail-v1',
 }
 
-const JD_A =
-  'Senior Java Developer, 5-8 years, Spring Boot, Noida, notice up to 60 days. ' +
-  'Build and run microservices for banking back-office systems.'
-
-/** Heuristic-friendly: descriptions are keyword lists the provider can find in a CV. */
-const CRITERIA_A: ScorecardCriterion[] = [
-  { id: 'c-java', label: 'Java', description: 'Java development', weight: 0.25, mustHave: true },
-  { id: 'c-spring', label: 'Spring Boot', description: 'Spring Boot services', weight: 0.25, mustHave: true },
-  { id: 'c-micro', label: 'Microservices', description: 'microservices', weight: 0.2, mustHave: false },
-  { id: 'c-rest', label: 'REST APIs', description: 'REST APIs Hibernate', weight: 0.15, mustHave: false },
-  { id: 'c-senior', label: 'Seniority', description: 'Senior Developer', weight: 0.15, mustHave: false },
-]
-const FILTERS_A = [
-  { id: 'f-exp', label: 'Experience 5-8 years', type: 'years_experience_range', value: { min: 5, max: 8 } },
-  { id: 'f-notice', label: 'Notice up to 60 days', type: 'max_notice_days', value: 60 },
-  { id: 'f-loc', label: 'Location Noida', type: 'location', value: 'Noida' },
-]
 
 /**
  * Sign-up is disabled in auth.ts, so accounts are written directly: a user row
@@ -146,7 +134,7 @@ async function main() {
   }
 
   console.log(`Seeded ${cvs.length} CVs:`, tally, `| ranked: ${ranked.length}`)
-  console.log('Demo logins: recruiter@shortlist.test, client.meridian@shortlist.test, head@shortlist.test (password: SEED_PASSWORD or the default in scripts/seed/seed.ts)')
+  console.log('Demo logins: recruiter@shortlist.test, client.meridian@shortlist.test, head@shortlist.test (password: the SEED_PASSWORD you set)')
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1) })

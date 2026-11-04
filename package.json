@@ -18,9 +18,11 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed/seed.ts",
     "seed:cvs": "tsx scripts/seed/generate.ts",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:reextract": "tsx --env-file=.env.local scripts/maintenance/reextract.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@neondatabase/serverless": "^1.2.0",
     "@paralleldrive/cuid2": "^3.3.0",
     "@shortlist/core": "*",
@@ -28,7 +30,6 @@
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "drizzle-kit": "^0.31.11",
     "drizzle-orm": "^0.45.4",
     "mammoth": "^1.13.0",
     "next": "16.4.4",
@@ -45,6 +46,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.4",
     "happy-dom": "^21.0.4",
@@ -58,5 +60,10 @@
   },
   "engines": {
     "node": "24.x"
+  },
+  "overrides": {
+    "@vercel/cli-config": {
+      "zod": "$zod"
+    }
   }
 }
