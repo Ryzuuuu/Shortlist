@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
-import { can, weekBounds } from '@shortlist/core'
+import { ACCEPTANCE_BASELINE_PCT, ACCEPTANCE_TARGET_PCT, SHORTLIST_TARGET_PCT, can, weekBounds } from '@shortlist/core'
 import { requireStaff } from '@/lib/session'
 import { getWeeklyAgreement } from '@/lib/queries/agreement'
+import { getSuccessMetrics } from '@/lib/queries/success'
 import { ButtonLink } from '@/components/button-link'
 import { EmptyState, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 
@@ -15,7 +16,7 @@ export default async function DeliveryDashboard({ searchParams }: { searchParams
   const raw = Number.parseInt((await searchParams).week ?? '0', 10)
   const weeksAgo = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), MAX_WEEKS_BACK) : 0
   const { start, end } = weekBounds(new Date(), weeksAgo)
-  const data = await getWeeklyAgreement(start, end)
+  const [data, success] = await Promise.all([getWeeklyAgreement(start, end), getSuccessMetrics()])
 
   const disagreements = data.rows.flatMap((r) =>
     r.result.disagreements.map((d) => ({ ...d, name: r.names[d.candidateId] ?? 'Unnamed candidate', title: r.title, clientName: r.clientName, scored: r.result.scoredCount })),
@@ -51,6 +52,29 @@ export default async function DeliveryDashboard({ searchParams }: { searchParams
           </a>
         </nav>
       </div>
+
+      <section aria-label="Success measures" className="mb-8">
+        <h2 className="mb-2 font-sans text-sm font-medium">Success measures, all time</h2>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <dt className="text-sm text-[var(--color-muted)]">Shortlist within 48 hours</dt>
+            <dd className="font-serif text-4xl">{success.shortlist48h.pct === null ? '—' : `${success.shortlist48h.pct}%`}</dd>
+            <dd className="text-sm text-[var(--color-muted)]">
+              {success.shortlist48h.met} of {success.shortlist48h.total} requisitions · target {SHORTLIST_TARGET_PCT}%
+            </dd>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <dt className="text-sm text-[var(--color-muted)]">Clients accepting submitted candidates</dt>
+            <dd className="font-serif text-4xl">{success.acceptance.pct === null ? '—' : `${success.acceptance.pct}%`}</dd>
+            <dd className="text-sm text-[var(--color-muted)]">
+              {success.acceptance.met} of {success.acceptance.total} decisions · target {ACCEPTANCE_TARGET_PCT}% (from {ACCEPTANCE_BASELINE_PCT}%)
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-2 text-xs text-[var(--color-muted)]">
+          Screening time per requisition is not measured here: it needs a baseline from the old process.
+        </p>
+      </section>
 
       {data.rows.length === 0 ? (
         <EmptyState

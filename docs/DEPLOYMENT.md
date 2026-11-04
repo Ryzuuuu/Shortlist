@@ -2,11 +2,11 @@
 
 Target: Vercel (app) + Neon (Postgres) + Vercel Blob (CV files). `vercel.json` pins the region to `bom1` (Mumbai) for users in India; put the Neon project in a nearby region (AWS Asia Pacific, Mumbai or Singapore).
 
-> Status: **deployed** at https://shortlist-six-flax.vercel.app (Vercel project `shortlist`, region `bom1`, Neon project `shortlist` in Singapore, private Vercel Blob store `shortlist-cvs`). A scripted smoke test against that address passed 21 of 21 checks: sign-in for all three roles, wrong-password and self-sign-up refusal, role checks on the upload and CSV APIs, one client's page containing none of another client's candidates (with a control showing the test can detect a leak), a real PDF upload stored in Blob, parsed and scored, and a repeat upload recognised as a duplicate. Not yet checked: the phone layout, and a browser pass over each screen.
+> Status: **deployed** at https://shortlist-six-flax.vercel.app (Vercel project `shortlist`, region `bom1`, Neon project `shortlist` in Singapore, private Vercel Blob store `shortlist-cvs`). `npm run smoke` against that address passes (40 checks: sign-in for all three roles, security headers, cookie flags, access control, client isolation with a control, the new screens, and a real upload): sign-in for all three roles, wrong-password and self-sign-up refusal, role checks on the upload and CSV APIs, one client's page containing none of another client's candidates (with a control showing the test can detect a leak), a real PDF upload stored in Blob, parsed and scored, and a repeat upload recognised as a duplicate. Not yet checked: the phone layout, and a browser pass over each screen.
 
 > Access: the main address `shortlist-six-flax.vercel.app` is public (the app's own sign-in protects the data). Vercel's per-deployment URLs (`shortlist-<hash>-...vercel.app`) stay behind Vercel Authentication.
 
-> Known behaviour: a client opening another client's requisition gets an HTTP **200** page that says "not found", not a 404 status, because the page streams (Cache Components) and the status line is sent before the access check finishes. No data is included in that response. A strict 404 would need the check to run before streaming starts.
+> Known behaviour: a client opening another client's requisition gets an HTTP **200** page that says "not found", not a 404 status, because the page streams (Cache Components) and the status line is sent before the access check finishes. No data is included in that response. The same applies to a client opening a staff page: the response is HTTP 200 containing a redirect to `/portal` and none of the staff content (checked by `npm run smoke`). A strict 404 or 302 would need the check to run before streaming starts.
 
 ## 1. Services
 
@@ -24,6 +24,7 @@ Target: Vercel (app) + Neon (Postgres) + Vercel Blob (CV files). `vercel.json` p
 | `NEXT_PUBLIC_APP_URL` | no | Same origin. If unset, the browser auth client uses the page's own origin |
 | `BLOB_READ_WRITE_TOKEN` | yes on Vercel | Without it uploads fail with a clear error (the local-disk fallback is refused on Vercel) |
 | `LLM_PROVIDER` | no | `heuristic` (default), `anthropic`, `gemini` |
+| `ANTHROPIC_MODEL` / `GEMINI_MODEL` | no | Override the model (defaults `claude-opus-5-5` and `gemini-2.5-flash`); a cheaper model suits bulk screening. The Gemini default is not verified against the live API |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | only for that provider | A missing key falls back to `heuristic` |
 | `AUDIT_HASH_KEY` | recommended | Keys the anonymised ID kept after a deletion. Falls back to `BETTER_AUTH_SECRET`. Do not rotate it after deletions have happened or earlier stubs stop matching |
 | `SEED_PASSWORD` | seeding only | Password for the demo accounts. Required, 12+ characters, no default |
@@ -46,6 +47,15 @@ Self-sign-up is disabled, so no one can create an account through the site. Acco
 
 - **Demo or staging:** `DATABASE_URL="<url>" SEED_PASSWORD="<strong password>" npm run db:seed` loads demo accounts and 44 synthetic CVs. The script refuses to run with `NODE_ENV=production`.
 - **Real use:** do not seed the production database. Create the first delivery head and recruiters directly in SQL or with a small admin script (a user row with `role`, plus a credential `accounts` row holding a hash from `better-auth/crypto`'s `hashPassword`). An in-app admin screen is not built.
+
+## 4b. Maintenance commands
+
+After changing the scorer, the extractor or the LLM provider, refresh stored data so the app and new uploads agree:
+
+```bash
+npm run db:reextract   # re-derive profiles and de-duplication keys from the stored CV text (idempotent)
+npm run db:rescore     # re-score every candidate (free with the heuristic provider; one model call each otherwise)
+```
 
 ## 5. Deploy
 

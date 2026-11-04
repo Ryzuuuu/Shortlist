@@ -14,6 +14,7 @@ All assumptions are labelled with their impact and the step they affect.
 **Assumption:** The candidate pool is global. A candidate is identified first by normalised email, then by normalised phone, then by fuzzy match on (full name + most-recent company + most-recent role title) with a Jaro-Winkler similarity ≥ 0.92.  
 **If matched:** the existing candidate record is reused; a new score row is created for the requisition.  
 **If not matched:** a new candidate record is created.  
+**Matching details:** e-mail comparison ignores case and `+tag` aliases and ignores dots only for Gmail (on other domains `john.smith` and `johnsmith` are different people); phone comparison uses the last ten digits, so `+91 98765 43210`, `098765 43210` and `98765-43210` match. Two copies of the same person uploaded at the same moment (uploads run four at a time) are reconciled after insertion: the later insert defers to the earlier one.
 **Rationale:** User-specified in the approved plan (change #1).
 
 ## A3 — Ingestion: One File Per Request
@@ -62,3 +63,23 @@ All assumptions are labelled with their impact and the step they affect.
 ## A13 — Consent Withdrawal and Right of Access
 **Assumption:** Deletion on request (A9) is the only data-subject workflow built. Consent is recorded at upload (A8) and shown on the candidate page; a separate "withdraw consent" state and a data-export (right of access) flow are not built. The `consent_withdrawn_at` column exists for them.
 **Impact:** Out of the core slice; listed as optional depth in the brief.
+
+## A14 — Who Moves a Candidate Along the Pipeline
+**Assumption:** Stages are moved by the actor who owns the decision. Opening a CV moves sourced to screened; the Submit button moves screened to submitted; the client moves submitted to shortlisted and shortlisted to interview (by proposing a slot); the recruiter moves interview to offered and offered to joined by hand. Either side can reject an open candidate. A recruiter-side rejection needs a reason that stays internal and is never shown to a client (A7).
+**Impact:** `packages/core/src/recruiter-stages.ts`; the pipeline board shows who acts at each stage.
+
+## A15 — Job-Description Filters Are Labels, Not Verdicts
+**Assumption:** Experience, notice period, CTC (and location, if a scorecard has it) read from the JD are compared with what each CV states and shown as meets / misses / not stated. They never change a score and never hide or remove a candidate (AI rule 4). A fact the CV does not state is "not stated", not a miss. Experience is taken from the CV if it says so, otherwise computed from the work-history dates; degree years are not counted as work. Equal scores are ordered by fewest filters missed.
+**Impact:** `jd-filters.ts` (`evaluateFilters`), ranked list, candidate review screen.
+
+## A16 — Expected CTC Is Not Shown to Clients
+**Assumption:** A candidate's expected or current CTC is negotiation-sensitive, so the client portal shows experience and notice period but never CTC. Recruiters see it (as a JD-filter check).
+
+## A17 — Files Abandoned Mid-Processing Are Surfaced
+**Assumption:** A file that stays `pending` or `parsing` for more than three minutes (a timed-out request or a restart) is treated as abandoned. It appears under "Needs your attention" with a Retry button, and re-selecting the same file in the upload zone re-processes it instead of skipping it as a duplicate. This upholds "never silently dropped" (AI rule 5).
+
+## A18 — Quotes Across Redactions
+**Assumption:** The AI reader sees redacted text, so a quote can accidentally span a `[REDACTED:...]` marker, which is not in the original CV. Rather than discard the whole claim, the longest marker-free part of the quote that exists verbatim in the original CV (at least 8 characters) is kept as the evidence. Nothing is ever rewritten or added, so AI rule 2 holds; if no such part exists the claim is unverified and counts as unknown.
+
+## A19 — Success Measures
+**Assumption:** "Shortlist within 48 hours" is measured from a requisition's creation to the first submission recorded in the audit log; a requisition open longer than 48 hours with nothing submitted counts as a miss, a newer one is not counted yet. "Client acceptance" is shortlists divided by shortlists plus rejections. Screening-time reduction is not measured because there is no baseline from the old process.

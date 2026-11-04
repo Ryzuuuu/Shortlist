@@ -11,11 +11,12 @@ recruiters' choices. Built as a take-home for a Software Engineering Intern role
 
 1. **JD intake.** Paste a job description; get an editable scorecard (criteria, weights, must-haves) plus experience, notice and CTC filters read from the text.
 2. **Bulk CV upload.** PDF or DOCX, up to 4 MB each, up to 500 at a time. One file per request, 4 in parallel, per-file status saved so interrupted uploads resume. Failed and unreadable files stay visible with a Retry button.
-3. **Ranked list with evidence.** Score, per-criterion result, the best verified quote and the next action, per row. Split-view CV: click evidence to highlight it in the CV text.
+3. **Ranked list with evidence.** Score, per-criterion result, the best verified quote and the next action, per row. Search by name, role or skill and filter by Fit / Below fit / Needs review: nobody is ever removed. The JD's experience, notice and CTC limits show on each candidate as labels, never as verdicts. Split-view CV: click evidence to highlight it in the CV text.
 4. **Submit to client.** Disabled until the recruiter has opened the CV (logged as `viewedByRecruiterAt`, and enforced again on the server).
 5. **Client portal (mobile-first).** Contacts masked until shortlisted. Shortlist, reject with a reason, or propose an interview time.
-6. **Delivery dashboard.** Weekly AI-rank vs recruiter-choice agreement, disagreements listed, CSV export, and an audit log.
-7. **DPDP Act 2023.** Consent record per candidate (hiring only), deletion on request (profile, files and AI cache removed; anonymised audit stub kept), and a log of who viewed what.
+6. **Pipeline.** A board per requisition from Sourced to Joined. The recruiter moves candidates to Offered and Joined or rejects with an internal reason; the client's decisions move the rest.
+7. **Delivery dashboard.** The brief's success measures (shortlist within 48 hours, client acceptance), weekly AI-rank vs recruiter-choice agreement with disagreements and CSV export, and an audit log.
+8. **DPDP Act 2023.** Consent record per candidate (hiring only), deletion on request (profile, files and AI cache removed; anonymised audit stub kept), and a log of who viewed what.
 
 ## The AI rules (and where they are enforced)
 
@@ -28,7 +29,7 @@ recruiters' choices. Built as a take-home for a Software Engineering Intern role
 | Low confidence, scans without a vision provider, or parse failures go to "Needs review", never dropped | `process.ts`, attention list |
 | Results are cached by content hash and scorecard | `src/lib/llm/index.ts` |
 
-`LLM_PROVIDER` is `anthropic`, `gemini` or `heuristic`. With `heuristic` (the default) the app works with no API key, using keyword matching.
+`LLM_PROVIDER` is `anthropic`, `gemini` or `heuristic`. With `heuristic` (the default) the app works with no API key, using whole-word keyword matching. The Anthropic provider uses the official SDK with schema-constrained output (model from `ANTHROPIC_MODEL`, default `claude-opus-5-5`); the Gemini provider reads `GEMINI_MODEL`. CV text is treated as untrusted in every prompt.
 
 ## Access control
 
@@ -57,9 +58,11 @@ A committed `.npmrc` sets `legacy-peer-deps` because `vitest` and `@types/node@2
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` / `build` / `start` | Next.js |
-| `npm run typecheck` / `lint` / `test` | Checks (all must pass before a commit) |
+| `npm run typecheck` / `lint` / `test` | Checks (all must pass before a commit; the same run in CI) |
+| `npm run smoke` | End-to-end checks against a running deployment (`BASE_URL`, `SEED_PASSWORD`, optional `UPLOAD_PDF`) |
 | `npm run db:migrate` / `db:generate` / `db:studio` | Drizzle |
 | `npm run db:seed` / `seed:cvs` | Demo data / regenerate `seed/cvs` |
+| `npm run db:rescore` / `db:reextract` | Re-score every candidate / re-derive profiles and de-duplication keys, after changing the scorer or extractor |
 
 ## Layout
 
@@ -68,9 +71,11 @@ packages/core/   pure domain logic, no framework imports (policy, redaction, sco
 src/app/         recruiter/, portal/ (client), delivery/, api/
 src/lib/         auth, ingestion, llm providers, queries, compliance
 scripts/seed/    synthetic CVs and demo seed
-docs/            ASSUMPTIONS.md, DEPLOYMENT.md
+docs/            REQUIREMENTS.md (brief -> code -> test), ASSUMPTIONS.md, DEPLOYMENT.md
+SECURITY.md      security model, known limitations, how to report
 ```
 
+Every item in the brief is traced to its code and its test in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
 Every assumption made where the brief was silent is labelled in [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 Deployment steps are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
