@@ -48,7 +48,7 @@
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.11",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.4.4",
     "happy-dom": "^21.0.4",
     "jszip": "^3.10.2",
