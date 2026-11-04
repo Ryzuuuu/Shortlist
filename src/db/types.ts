@@ -54,6 +54,12 @@ export interface CandidateProfile {
   skills: string[]
   workHistory: WorkHistoryEntry[]
   education: EducationEntry[]
+  /** Years of experience: as stated on the CV, otherwise computed from its dates. null when unknown. */
+  experienceYears?: number | null
+  /** Notice period in days (0 = immediate), if the CV states one. */
+  noticeDays?: number | null
+  /** Expected CTC (else current CTC) in lakhs per annum, if the CV states one. */
+  ctcLpa?: number | null
 }
 
 // ─── LLM / Scoring ────────────────────────────────────────────────────────────

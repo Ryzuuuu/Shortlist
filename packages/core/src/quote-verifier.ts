@@ -87,6 +87,33 @@ export function verifyQuotes(
   })
 }
 
+// ─── Salvaging a quote that crossed a redaction ───────────────────────────────
+
+const REDACTION_MARKER = /\[REDACTED:[A-Z_]+\]/g
+
+/**
+ * The scorer reads REDACTED text, so a quote may run across a "[REDACTED:EMAIL]"
+ * style marker. Those words are not in the CV, so the whole quote fails
+ * verification even though most of it is genuine. This keeps the longest piece
+ * of the quote that has no marker in it AND is found verbatim in the original
+ * CV (at least `minLength` characters). It never rewrites or adds text: what
+ * comes back is either the original quote, a verbatim part of it, or null.
+ */
+export function salvageQuote(
+  quote: string | null | undefined,
+  sourceText: string,
+  minLength = 8,
+): string | null {
+  if (!quote || !quote.trim()) return null
+  if (verifyQuote(quote, sourceText).verified) return quote
+  const pieces = quote
+    .split(REDACTION_MARKER)
+    .map((p) => p.trim())
+    .filter((p) => p.length >= minLength)
+    .sort((a, b) => b.length - a.length)
+  return pieces.find((p) => verifyQuote(p, sourceText).verified) ?? null
+}
+
 // ─── Locating a verified quote ────────────────────────────────────────────────
 
 export interface QuoteSpan {

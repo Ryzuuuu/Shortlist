@@ -35,7 +35,8 @@ async function parsePdf(buffer: Buffer): Promise<Omit<ParseResult, 'contentHash'
     const parser = new PDFParse({ data: new Uint8Array(buffer) })
     let text: string
     try {
-      text = ((await parser.getText()).text ?? '').trim()
+      // pdf-parse appends "-- 1 of 2 --" page footers; they are not CV content and must not end up in quotes.
+      text = ((await parser.getText()).text ?? '').replace(/^[ \t]*--[ \t]*\d+[ \t]+of[ \t]+\d+[ \t]*--[ \t]*$/gm, '').trim()
     } finally {
       await parser.destroy()
     }

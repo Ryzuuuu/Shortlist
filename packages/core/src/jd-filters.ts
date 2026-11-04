@@ -44,3 +44,74 @@ export function extractJdFilters(jd: string): JdFilter[] {
 
   return out
 }
+
+// ─── Applying filters to a candidate ─────────────────────────────────────────
+
+/** What the CV says about the candidate, any of which may be unknown. */
+export interface CandidateFacts {
+  experienceYears?: number | null
+  noticeDays?: number | null
+  ctcLpa?: number | null
+  location?: string | null
+}
+
+export type FilterStatus = 'meets' | 'misses' | 'unknown'
+
+export interface FilterCheck {
+  id: string
+  label: string
+  status: FilterStatus
+  /** Short human reading, e.g. "90 days (limit 60)" */
+  detail: string
+}
+
+interface AnyFilter {
+  id: string
+  label: string
+  type: string
+  value: unknown
+}
+
+const isRange = (v: unknown): v is { min: number; max: number | null } =>
+  typeof v === 'object' && v !== null && typeof (v as { min?: unknown }).min === 'number'
+
+/**
+ * Compare a candidate's stated facts with the JD's filters. These are labels for
+ * the recruiter, never a verdict: nothing here rejects or hides a candidate
+ * (AI rule 4), and a fact the CV does not state is "unknown", not a miss.
+ * Filter types this function does not know are skipped.
+ */
+export function evaluateFilters(filters: AnyFilter[], facts: CandidateFacts): FilterCheck[] {
+  const out: FilterCheck[] = []
+  for (const f of filters) {
+    if (f.type === 'years_experience_range' && isRange(f.value)) {
+      const y = facts.experienceYears
+      const want = f.value.max === null ? `${f.value.min}+ years` : `${f.value.min}-${f.value.max} years`
+      if (y == null) out.push({ id: f.id, label: f.label, status: 'unknown', detail: `not stated (wanted ${want})` })
+      else {
+        const ok = y >= f.value.min && (f.value.max === null || y <= f.value.max)
+        out.push({ id: f.id, label: f.label, status: ok ? 'meets' : 'misses', detail: `${y} years (wanted ${want})` })
+      }
+    } else if (f.type === 'max_notice_days' && typeof f.value === 'number') {
+      const d = facts.noticeDays
+      if (d == null) out.push({ id: f.id, label: f.label, status: 'unknown', detail: `not stated (limit ${f.value} days)` })
+      else out.push({ id: f.id, label: f.label, status: d <= f.value ? 'meets' : 'misses', detail: d === 0 ? `immediate (limit ${f.value} days)` : `${d} days (limit ${f.value})` })
+    } else if (f.type === 'ctc_range_lpa' && isRange(f.value)) {
+      const c = facts.ctcLpa
+      const max = f.value.max ?? f.value.min
+      if (c == null) out.push({ id: f.id, label: f.label, status: 'unknown', detail: `not stated (budget up to ${max} LPA)` })
+      else out.push({ id: f.id, label: f.label, status: c <= max ? 'meets' : 'misses', detail: `${c} LPA (budget up to ${max})` })
+    } else if (f.type === 'location' && typeof f.value === 'string') {
+      const loc = facts.location
+      if (!loc) out.push({ id: f.id, label: f.label, status: 'unknown', detail: `not stated (wanted ${f.value})` })
+      else out.push({ id: f.id, label: f.label, status: loc.toLowerCase().includes(f.value.toLowerCase()) ? 'meets' : 'misses', detail: `${loc} (wanted ${f.value})` })
+    }
+  }
+  return out
+}
+
+/** Counts for a compact table cell: "2 of 3 filters met". */
+export function summariseFilters(checks: FilterCheck[]): { meets: number; misses: number; unknown: number; total: number } {
+  const count = (s: FilterStatus) => checks.filter((c) => c.status === s).length
+  return { meets: count('meets'), misses: count('misses'), unknown: count('unknown'), total: checks.length }
+}

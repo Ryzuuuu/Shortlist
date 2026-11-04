@@ -13,31 +13,38 @@
 
 // ─── Normalisation helpers ────────────────────────────────────────────────────
 
+/** Domains where dots in the local part are not significant (Gmail ignores them). */
+const DOT_INSENSITIVE_DOMAINS = new Set(['gmail.com', 'googlemail.com'])
+
 /**
  * Normalise an email address for dedup comparison.
- * Lowercase, trim, remove dots from local part of Gmail addresses.
+ * Lowercase, trim, drop a "+tag" alias, and drop dots from the local part ONLY
+ * for providers that ignore them (Gmail). On other domains dots are significant:
+ * john.smith@corp.com and johnsmith@corp.com are usually different people, and
+ * merging them would join two candidates' records.
  */
 export function normaliseEmail(email: string | null | undefined): string | null {
   if (!email) return null
   const trimmed = email.toLowerCase().trim()
-  // Remove + aliases (e.g. user+tag@gmail.com → user@gmail.com)
-  const [local, domain] = trimmed.split('@')
-  if (!domain) return trimmed
-  const cleanLocal = local.replace(/\+.*$/, '').replace(/\./g, '')
-  return `${cleanLocal}@${domain}`
+  const at = trimmed.lastIndexOf('@')
+  if (at <= 0 || at === trimmed.length - 1) return trimmed || null
+  const domain = trimmed.slice(at + 1)
+  let local = trimmed.slice(0, at).replace(/\+.*$/, '')
+  if (DOT_INSENSITIVE_DOMAINS.has(domain)) local = local.replace(/\./g, '')
+  return local ? `${local}@${domain}` : trimmed
 }
 
 /**
- * Normalise a phone number to a digit-only string for comparison.
- * Strips spaces, dashes, parentheses, plus signs, leading zeros.
- * Returns null if the result has fewer than 7 digits.
+ * Normalise a phone number for comparison: digits only, leading zeros dropped,
+ * and anything beyond the last 10 digits (country code such as 91) ignored, so
+ * "+91 98765 43210", "098765 43210" and "98765-43210" are the same number.
+ * Returns null if fewer than 7 digits remain.
  */
 export function normalisePhone(phone: string | null | undefined): string | null {
   if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  // Strip leading country code zeros / leading zeros
-  const stripped = digits.replace(/^0+/, '')
-  return stripped.length >= 7 ? stripped : null
+  const stripped = phone.replace(/\D/g, '').replace(/^0+/, '')
+  if (stripped.length < 7) return null
+  return stripped.length > 10 ? stripped.slice(-10) : stripped
 }
 
 // ─── Jaro-Winkler similarity ──────────────────────────────────────────────────

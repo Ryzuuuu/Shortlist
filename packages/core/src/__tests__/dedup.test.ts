@@ -18,8 +18,20 @@ describe('normaliseEmail', () => {
     expect(normaliseEmail('user+tag@gmail.com')).toBe('user@gmail.com')
   })
 
-  it('removes dots from local part', () => {
+  it('removes dots from the local part for Gmail, which ignores them', () => {
     expect(normaliseEmail('john.doe@gmail.com')).toBe('johndoe@gmail.com')
+    expect(normaliseEmail('John.Doe+jobs@googlemail.com')).toBe('johndoe@googlemail.com')
+  })
+
+  it('keeps dots on other domains, where john.smith and johnsmith are different people', () => {
+    expect(normaliseEmail('john.smith@corp.com')).toBe('john.smith@corp.com')
+    expect(normaliseEmail('john.smith@corp.com')).not.toBe(normaliseEmail('johnsmith@corp.com'))
+  })
+
+  it('leaves malformed addresses alone instead of crashing', () => {
+    expect(normaliseEmail('not-an-email')).toBe('not-an-email')
+    expect(normaliseEmail('@nolocal.com')).toBe('@nolocal.com')
+    expect(normaliseEmail('nodomain@')).toBe('nodomain@')
   })
 
   it('returns null for null input', () => {
@@ -32,12 +44,22 @@ describe('normaliseEmail', () => {
 })
 
 describe('normalisePhone', () => {
-  it('strips non-digit characters', () => {
-    expect(normalisePhone('+91 98765-43210')).toBe('919876543210')
+  it('strips non-digit characters and the country code', () => {
+    expect(normalisePhone('+91 98765-43210')).toBe('9876543210')
   })
 
   it('strips leading zeros', () => {
-    expect(normalisePhone('0091 98765 43210')).toBe('919876543210')
+    expect(normalisePhone('0091 98765 43210')).toBe('9876543210')
+    expect(normalisePhone('098765 43210')).toBe('9876543210')
+  })
+
+  it('matches the same number written with and without the country code', () => {
+    const forms = ['+91 98765 43210', '098765 43210', '98765-43210', '(+91) 98765 43210', '91-9876543210']
+    expect(new Set(forms.map(normalisePhone)).size).toBe(1)
+  })
+
+  it('keeps numbers shorter than ten digits whole', () => {
+    expect(normalisePhone('2234567')).toBe('2234567')
   })
 
   it('returns null for null input', () => {
