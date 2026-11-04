@@ -8,6 +8,16 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Production runs Node 24 (engines in package.json): keep the types on 24.x.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+      # eslint-plugin-react (via eslint-config-next) supports ESLint up to 9. Revisit when it adds 10.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      # typescript-eslint supports TypeScript below 6.1. Revisit when it supports 7.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
