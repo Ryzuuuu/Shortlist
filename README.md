@@ -5,6 +5,8 @@ Recruiters upload a pile of CVs against a job and see the best fits first, each 
 Clients review submitted candidates on their phones. A delivery head sees how the AI's ranking compares with
 recruiters' choices. Built as a take-home for a Software Engineering Intern role.
 
+**Live demo:** https://shortlist-six-flax.vercel.app (demo accounts below; ask the author for the password).
+
 ## What it does
 
 1. **JD intake.** Paste a job description; get an editable scorecard (criteria, weights, must-haves) plus experience, notice and CTC filters read from the text.
