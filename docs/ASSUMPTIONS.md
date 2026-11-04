@@ -56,7 +56,7 @@ All assumptions are labelled with their impact and the step they affect.
 ## A12 — Pipeline Stage Ordering
 **Assumption:** Valid pipeline stages in order are: `sourced → screened → submitted → shortlisted → interview → offered → joined`. `rejected` is a terminal state reachable from any stage. Transitions are enforced by the pipeline state machine in `packages/core`.
 
-## A12 — View Gate and the Submissions Row
+## A20 — View Gate and the Submissions Row
 **Assumption:** A `submissions` row is created the first time a recruiter opens a candidate's CV (it holds `viewedByRecruiterAt`). The row's existence does NOT make the candidate visible to clients; only the pipeline stage (`submitted` or later, A7) does. "Submit to client" is refused server-side unless `viewedByRecruiterAt` is set, in addition to being disabled in the UI.
 **Impact:** Client portal queries must filter on pipeline stage, never on the presence of a submission.
 
@@ -83,3 +83,23 @@ All assumptions are labelled with their impact and the step they affect.
 
 ## A19 — Success Measures
 **Assumption:** "Shortlist within 48 hours" is measured from a requisition's creation to the first submission recorded in the audit log; a requisition open longer than 48 hours with nothing submitted counts as a miss, a newer one is not counted yet. "Client acceptance" is shortlists divided by shortlists plus rejections. Screening-time reduction is not measured because there is no baseline from the old process.
+
+## A21 — What "Below fit" Means
+**Assumption:** The brief says low scorers must stay searchable but does not define "low". A candidate is labelled **Below fit** when the weighted score is under 40 out of 100, or when any must-have criterion is not met (or unknown). It is a label only: the candidate stays in the list, in search and in every filter, and can still be submitted.
+**Impact:** `packages/core/src/score-calculator.ts`; the "Below fit" filter on the ranked list.
+
+## A22 — Demo Data Is Synthetic
+**Assumption:** The brief forbids real personal data. The two clients (Meridian Bank Services, Kestrel Retail), the 44 CVs, and every name, e-mail address (`example.com`) and phone number (`+91 90000 xxxxx`) are invented. The seed is deterministic, so the same data can be recreated.
+**Impact:** `scripts/seed/`, `seed/cvs/`.
+
+## A23 — Default AI Reader Is a Keyword Matcher
+**Assumption:** The brief asks for an AI score but gives no model or key. So that the product works end to end with no key and can be tested deterministically, the default reader (`LLM_PROVIDER=heuristic`) is a whole-word keyword matcher that obeys the same AI rules (verified quotes, code-computed score, never rejects). Anthropic and Gemini readers are built behind the same interface and are used when a key and `LLM_PROVIDER` are set. They are tested with mocked responses; they have not been run against a live key in this deployment.
+**Impact:** `src/lib/llm/`; the live demo runs on the keyword matcher.
+
+## A24 — Roles and Accounts
+**Assumption:** Recruiters work across all clients and requisitions (no per-recruiter assignment). The delivery head has full access under the policy (insights, audit log, export). There is no in-app user or client management: accounts and clients are created by the seed script or directly in the database, and self sign-up is disabled.
+**Impact:** `packages/core/src/policy.ts`, `scripts/seed/`.
+
+## A25 — One Shared Demo
+**Assumption:** The live demo uses one database and one set of demo accounts for every reviewer, so what one reviewer does (submit, shortlist, delete) is visible to the next. Nothing in it is real.
+**Impact:** `deployment.md`.

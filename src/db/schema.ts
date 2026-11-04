@@ -193,7 +193,10 @@ export const scorecards = pgTable(
      * [{ id, label, description, weight, mustHave }]
      */
     criteria: jsonb('criteria').notNull(),
-    /** filters: hard-rejection filters applied before scoring */
+    /**
+     * filters: limits read from the JD (experience, notice, CTC, location). They label each
+     * candidate as meets / misses / not stated. They never change a score or remove anyone.
+     */
     filters: jsonb('filters'), // FilterRule[]
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -224,7 +227,7 @@ export const candidates = pgTable(
     contentHash: text('content_hash').notNull(),
     /** Normalised email for dedup lookups */
     normalisedEmail: text('normalised_email'),
-    /** Normalised phone (E.164) for dedup lookups */
+    /** Normalised phone (last ten digits) for dedup lookups */
     normalisedPhone: text('normalised_phone'),
     // DPDP Act 2023 consent fields
     consentGiven: boolean('consent_given').default(true).notNull(),
