@@ -41,14 +41,47 @@ function extractKeywords(text: string): string[] {
     .filter((w) => w.length > 2 && !stopWords.has(w))
 }
 
+/** Whole-word match: "java" must not match inside "javascript", nor "rest" inside "interest". */
+function hasWord(lowerText: string, keyword: string): boolean {
+  return wordIndex(lowerText, keyword) !== -1
+}
+
+function wordIndex(lowerText: string, keyword: string): number {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = new RegExp(`(?:^|[^a-z0-9])(${escaped})(?![a-z0-9])`).exec(lowerText)
+  return m ? m.index + m[0].length - keyword.length : -1
+}
+
+const REDACTION_MARKER = /\[REDACTED:[A-Z_]+\]/g
+const MAX_QUOTE_CHARS = 160
+
+/**
+ * A quote must be an exact piece of the ORIGINAL CV (AI rule 2), but the scorer
+ * reads the REDACTED text. So quote one line, never across a [REDACTED:...]
+ * marker (those words do not exist in the CV), and keep it short.
+ */
 function findBestQuote(text: string, keyword: string): string | null {
-  const lower = text.toLowerCase()
-  const idx = lower.indexOf(keyword.toLowerCase())
-  if (idx === -1) return null
-  // Return a window of ~100 chars around the keyword
-  const start = Math.max(0, idx - 30)
-  const end = Math.min(text.length, idx + keyword.length + 70)
-  return text.slice(start, end).trim()
+  for (const line of text.split(/\r?\n/)) {
+    const idx = wordIndex(line.toLowerCase(), keyword)
+    if (idx === -1) continue
+
+    let start = 0
+    let end = line.length
+    for (const m of line.matchAll(REDACTION_MARKER)) {
+      const mEnd = m.index + m[0].length
+      if (mEnd <= idx) start = Math.max(start, mEnd)
+      else if (m.index >= idx + keyword.length) end = Math.min(end, m.index)
+    }
+    let from = start
+    let to = end
+    if (to - from > MAX_QUOTE_CHARS) {
+      from = Math.max(start, idx - 60)
+      to = Math.min(end, idx + keyword.length + 90)
+    }
+    const quote = line.slice(from, to).replace(/^[\s|,;:–-]+|[\s|,;:–-]+$/g, '')
+    if (quote.length >= keyword.length) return quote
+  }
+  return null
 }
 
 function scoreCriterion(
@@ -68,7 +101,7 @@ function scoreCriterion(
     }
   }
 
-  const matched = keywords.filter((kw) => lowerCv.includes(kw))
+  const matched = keywords.filter((kw) => hasWord(lowerCv, kw))
   const ratio = matched.length / keywords.length
 
   let met: LLMCriterionResponse['met']

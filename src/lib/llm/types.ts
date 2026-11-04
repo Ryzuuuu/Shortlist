@@ -86,7 +86,7 @@ export interface LLMProvider {
 export interface VisionCapableLLMProvider extends LLMProvider {
   readonly supportsVision: true
   /**
-   * Extract text from a scanned PDF page image (base64-encoded).
+   * Transcribe a scanned CV (base64 PDF or image bytes).
    * Returns the extracted text, or null if extraction failed.
    */
   extractTextFromImage(base64Image: string, mimeType: string): Promise<string | null>
