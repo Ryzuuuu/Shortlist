@@ -2,20 +2,28 @@ import { neon } from '@neondatabase/serverless'
 import { drizzle } from 'drizzle-orm/neon-http'
 import * as schema from './schema'
 
-/**
- * Neon serverless HTTP client.
- * DATABASE_URL must be set at runtime (never committed).
- */
-function getDb() {
+function createDb() {
   const url = process.env.DATABASE_URL
   if (!url) {
     throw new Error('DATABASE_URL environment variable is not set')
   }
-  const sql = neon(url)
-  return drizzle(sql, { schema })
+  return drizzle(neon(url), { schema })
 }
 
-// Singleton for serverless — recreated per cold start (Neon HTTP is stateless)
-export const db = getDb()
+export type DB = ReturnType<typeof createDb>
 
-export type DB = typeof db
+let instance: DB | undefined
+
+/**
+ * Neon serverless HTTP client, created on first use rather than at import.
+ * `next build` imports every route module, and a build must not need production
+ * secrets; the "DATABASE_URL is not set" error now surfaces on the first query.
+ * DATABASE_URL is never committed.
+ */
+export const db: DB = new Proxy({} as DB, {
+  get(_target, prop) {
+    instance ??= createDb()
+    const value = Reflect.get(instance, prop, instance)
+    return typeof value === 'function' ? value.bind(instance) : value
+  },
+})

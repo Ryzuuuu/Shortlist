@@ -5,5 +5,6 @@ import { createAuthClient } from 'better-auth/client'
  * Used in Client Components for sign-in, sign-out, and session access.
  */
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  // Unset means "the origin serving this page", which is right for local, preview and production alike.
+  baseURL: process.env.NEXT_PUBLIC_APP_URL || undefined,
 })
