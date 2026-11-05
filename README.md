@@ -24,7 +24,7 @@ recruiters' choices. Built as a take-home for a Software Engineering Intern role
 | --- | --- |
 | The LLM returns only per-criterion `{met, quote, confidence}`; code computes the score from the scorecard weights | `packages/core/src/score-calculator.ts` |
 | Every quote must be a substring of the CV (whitespace and case normalised); otherwise it is dropped and marked unverified, and the claim counts as unknown | `quote-verifier.ts`, `src/lib/ingestion/process.ts` |
-| Name, gender, age/DOB, photo and marital status are redacted before text reaches the LLM | `redact.ts` |
+| The candidate's name (as read from the CV), e-mail, phone, labelled gender/age/DOB/marital status and photo mentions are redacted before text reaches the LLM. Best-effort regex: pronouns and unlabelled details are not removed | `redact.ts`, `process.ts` |
 | The AI never rejects anyone; low scorers stay in the list, labelled "below fit" | `process.ts`, ranked table |
 | Low confidence, scans without a vision provider, or parse failures go to "Needs review", never dropped | `process.ts`, attention list |
 | Results are cached by content hash and scorecard | `src/lib/llm/index.ts` |

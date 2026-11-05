@@ -5,7 +5,7 @@
  * Covered by DPDP Act 2023 and the AI Rules (rule #3).
  *
  * Redacted fields:
- *   • Name        — matched by common name patterns near document start
+ *   • Name        — the candidate's own name, supplied by the caller (see RedactOptions)
  *   • Email       — RFC-5321 simplified regex
  *   • Phone       — international + domestic formats
  *   • Gender      — pronouns, explicit gender words
@@ -17,6 +17,9 @@
  * Strategy: regex replacement → [REDACTED:<TYPE>]
  * All replacements are case-insensitive and global.
  *
+ * Names cannot be recognised by a regex, so the caller passes the name it has already
+ * extracted from the CV; every occurrence of it is replaced. Pronouns are not removed.
+ *
  * IMPORTANT: This is best-effort regex redaction. It is not a substitute
  * for a dedicated NER model. The LLM is instructed never to use personal
  * identifiers in its response; this is a defence-in-depth measure.
@@ -27,6 +30,35 @@ export interface RedactionResult {
   redactedText: string
   /** Number of replacements made, by category. */
   stats: Record<string, number>
+}
+
+export interface RedactOptions {
+  /** The candidate's own name parts, e.g. ['Ritika', 'Bansal']. */
+  names?: string[]
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Replace the candidate's name. The full name (in order, any spacing, any case) is replaced
+ * first; then each part of 3+ letters, matched with exact capitalisation and as a whole word,
+ * so "Dev" the surname is caught but the word "dev" in "dev tools" is left alone.
+ */
+function countAndReplaceNames(text: string, names: string[]): { text: string; count: number } {
+  const parts = names.flatMap((n) => n.split(/\s+/)).map((n) => n.replace(/[^\p{L}'’-]/gu, '')).filter(Boolean)
+  if (parts.length === 0) return { text, count: 0 }
+  let count = 0
+  const mark = '[REDACTED:NAME]'
+  let out = text
+  if (parts.length > 1) {
+    const full = new RegExp(String.raw`(?<![\p{L}])${parts.map(escapeRe).join(String.raw`\s+`)}(?![\p{L}])`, 'giu')
+    out = out.replace(full, () => (count++, mark))
+  }
+  for (const part of new Set(parts.filter((p) => p.length >= 3))) {
+    const re = new RegExp(String.raw`(?<![\p{L}])${escapeRe(part)}(?![\p{L}])`, 'gu')
+    out = out.replace(re, () => (count++, mark))
+  }
+  return { text: out, count }
 }
 
 // ─── Patterns ─────────────────────────────────────────────────────────────────
@@ -45,11 +77,12 @@ const PATTERNS: Pattern[] = [
     replacement: '[REDACTED:EMAIL]',
   },
 
-  // Phone — E.164, Indian mobile, common separators
+  // Phone — Indian mobile (optional +91, 5+5 digits) first, then E.164-style and common separators.
+  // The digit boundaries stop a number being cut short and leaving a stray digit behind.
   {
     name: 'phone',
     regex:
-      /(?:\+?\d{1,3}[\s\-.]?)?\(?\d{2,4}\)?[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}/g,
+      /(?<!\d)(?:\+?91[\s\-.]?)?0?[6-9]\d{4}[\s\-.]?\d{5}(?!\d)|(?<!\d)(?:\+?\d{1,3}[\s\-.]?)?\(?\d{2,4}\)?[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}(?!\d)/g,
     replacement: '[REDACTED:PHONE]',
   },
 
@@ -96,7 +129,7 @@ const PATTERNS: Pattern[] = [
   {
     name: 'photo',
     regex:
-      /\b(?:photograph|photo|picture|image|headshot)\s*(?:attached|enclosed|available|on\s+request)?\b/gi,
+      /\b(?:photograph|photo|picture|headshot)\b(?:\s+(?:attached|enclosed|available|on\s+request)\b)?|\b(?:image|picture)\s+(?:attached|enclosed)\b/gi,
     replacement: '[REDACTED:PHOTO]',
   },
 
@@ -122,9 +155,16 @@ const PATTERNS: Pattern[] = [
  * // → "John Smith, [REDACTED:EMAIL], [REDACTED:DATE]"
  * // Note: name redaction is best-effort via NER-like heuristics
  */
-export function redact(rawText: string): RedactionResult {
+export function redact(rawText: string, options: RedactOptions = {}): RedactionResult {
   const stats: Record<string, number> = {}
   let text = rawText
+
+  // Names first, so no later pattern can break a name apart.
+  const nameCount = countAndReplaceNames(text, options.names ?? [])
+  if (nameCount.count > 0) {
+    stats.name = nameCount.count
+    text = nameCount.text
+  }
 
   for (const pattern of PATTERNS) {
     const matches = text.match(pattern.regex) ?? []

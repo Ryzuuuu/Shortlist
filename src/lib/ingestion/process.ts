@@ -162,7 +162,7 @@ export async function scoreCandidate(
   if (!scorecard) return { kind: 'no_scorecard' }
 
   const [cand] = await db
-    .select({ rawText: candidates.rawText, contentHash: candidates.contentHash })
+    .select({ rawText: candidates.rawText, contentHash: candidates.contentHash, profile: candidates.profile })
     .from(candidates)
     .where(eq(candidates.id, candidateId))
     .limit(1)
@@ -175,8 +175,10 @@ export async function scoreCandidate(
     await db.delete(scores).where(and(eq(scores.candidateId, candidateId), eq(scores.requisitionId, requisitionId), eq(scores.scorecardId, scorecard.id)))
   }
 
-  // AI rule 3: only redacted text ever reaches the model.
-  const { redactedText } = redact(sourceText)
+  // AI rule 3: only redacted text ever reaches the model, including the candidate's own name.
+  const p = cand?.profile as Partial<CandidateProfile> | undefined
+  const names = [p?.firstName, p?.lastName].filter((n): n is string => !!n)
+  const { redactedText } = redact(sourceText, { names })
   const response = await scoreWithCache(hash, scorecard.id, { redactedText, criteria, cacheKey: `${hash}:${scorecard.version}` })
 
   // AI rule 2: verify every quote against the original CV text; drop unverifiable evidence.

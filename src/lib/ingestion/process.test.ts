@@ -111,7 +111,7 @@ function arrange(opts: {
       opts.pool ?? [],
       [{ createdAt: opts.createdAt ?? new Date('2026-11-04T10:00:00Z') }],
       opts.rivals ?? [],
-      [{ rawText: CV, contentHash: 'hash-1' }],
+      [{ rawText: CV, contentHash: 'hash-1', profile: { firstName: 'Ritika', lastName: 'Bansal' } }],
     ],
     scorecards: [opts.scorecard === null ? [] : [opts.scorecard ?? scorecard]],
   }
@@ -164,6 +164,7 @@ describe('AI rule 3: the model only sees redacted text', () => {
     const sent = state.scoreRequests[0]?.redactedText ?? ''
     expect(sent).not.toContain('ritika.bansal@example.com')
     expect(sent).not.toContain('98765 43210')
+    expect(sent).not.toMatch(/ritika|bansal/i) // the candidate's name is removed too
     expect(sent).toContain('Spring Boot') // the useful content is still there
   })
 })

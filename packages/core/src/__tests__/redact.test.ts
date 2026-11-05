@@ -88,6 +88,51 @@ describe('redact', () => {
     })
   })
 
+  describe('candidate name', () => {
+    const cv = 'Ritika Bansal\nSenior Java Developer\nContact RITIKA  BANSAL or Mr Bansal, Ritika.\nWorked on dev tools.'
+
+    it('replaces the full name (any case or spacing) and each name part', () => {
+      const { redactedText, stats } = redact(cv, { names: ['Ritika', 'Bansal'] })
+      expect(redactedText).not.toMatch(/ritika|bansal/i)
+      expect(redactedText).toContain('[REDACTED:NAME]')
+      expect(stats.name).toBeGreaterThan(0)
+    })
+
+    it('does nothing when no name is supplied', () => {
+      expect(redact(cv).redactedText).toContain('Ritika Bansal')
+    })
+
+    it('matches whole words only, and short parts need the full name', () => {
+      const { redactedText } = redact('Dev Menon built dev tools. Developer at Devon Ltd.', { names: ['Dev', 'Menon'] })
+      expect(redactedText).toContain('dev tools')
+      expect(redactedText).toContain('Developer')
+      expect(redactedText).toContain('Devon')
+      expect(redactedText).not.toContain('Menon')
+    })
+
+    it('leaves skills and job content intact', () => {
+      const { redactedText } = redact(cv, { names: ['Ritika', 'Bansal'] })
+      expect(redactedText).toContain('Senior Java Developer')
+    })
+  })
+
+  describe('regressions found by running real samples', () => {
+    it('removes a whole Indian mobile number with no digit left behind', () => {
+      for (const p of ['+91 98765 43210', '098765 43210', '98765-43210', '9876543210']) {
+        expect(redact(`Phone: ${p}`).redactedText, p).toBe('Phone: [REDACTED:PHONE]')
+      }
+    })
+
+    it('does not treat the word "image" as a photo reference', () => {
+      expect(redact('Built image processing pipelines.').redactedText).toBe('Built image processing pipelines.')
+    })
+
+    it('still redacts "photo attached" and "image attached"', () => {
+      expect(redact('Photo attached').redactedText).toContain('[REDACTED:PHOTO]')
+      expect(redact('Image attached').redactedText).toContain('[REDACTED:PHOTO]')
+    })
+  })
+
   describe('clean text passthrough', () => {
     it('does not alter professional content', () => {
       const cv = 'Led a team of 10 engineers. Delivered 3 major product launches.'
