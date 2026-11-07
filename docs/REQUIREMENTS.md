@@ -1,7 +1,7 @@
 # Requirements traceability
 
 Every item in the brief, where it lives in the code, and how it is checked. "Checked by" names an automated test
-(`npm test`, 270+ tests) or the live smoke test (`npm run smoke`, which runs against a deployment).
+(`npm test`, 300+ tests) or the live smoke test (`npm run smoke`, which runs against a deployment).
 
 ## Must have
 

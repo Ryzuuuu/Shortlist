@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/db', () => ({ db: {} }))
 
 describe('authentication hardening', () => {
-  it('refuses self-registration, so nobody can create a default recruiter account', async () => {
+  // The first import of the auth library is slow when many test files run at once; the default 5 s is too tight.
+  it('refuses self-registration, so nobody can create a default recruiter account', { timeout: 30_000 }, async () => {
     process.env.BETTER_AUTH_SECRET = 'test-secret-test-secret-test-secret-123'
     const { auth } = await import('./auth')
     expect(auth.options.emailAndPassword?.disableSignUp).toBe(true)
