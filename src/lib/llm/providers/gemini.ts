@@ -24,7 +24,7 @@ import {
 } from '../shared'
 
 /** Override with GEMINI_MODEL. */
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash'
 
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 const REQUEST_TIMEOUT_MS = 50_000

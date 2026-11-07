@@ -112,11 +112,11 @@ Environment variables (names only):
 | `BLOB_READ_WRITE_TOKEN` | yes on Vercel | CV file storage. Without it uploads fail with a clear error |
 | `LLM_PROVIDER` | no | `heuristic` (default, no key), `anthropic` or `gemini` |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | only for `anthropic` | Key, and an optional model override (default `claude-opus-5-5`) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | only for `gemini` | Key, and an optional model override (default `gemini-2.5-flash`; not verified against the live API) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | only for `gemini` | Key, and an optional model override (default `gemini-3.5-flash`, checked against the live API on 8 Nov 2026; Google retires models, so set `GEMINI_MODEL` if it returns 404) |
 | `AUDIT_HASH_KEY` | recommended | Keys the anonymised ID kept in the audit log after a deletion. Falls back to `BETTER_AUTH_SECRET`. Do not change it once deletions have happened |
 | `SEED_PASSWORD` | seeding only | Password for the demo accounts. Not needed by the running app |
 
-The live demo runs with `LLM_PROVIDER` unset, which means the built-in keyword scorer (`heuristic`). The Anthropic and Gemini providers are implemented and unit-tested with mocked responses; they have not been run against a live key in this deployment. Setting a key and `LLM_PROVIDER` is all it takes, and a key with vision support is also what lets scanned PDFs be read (without one they go to "Needs review").
+The live demo runs with `LLM_PROVIDER` unset, which means the built-in keyword scorer (`heuristic`). The Anthropic and Gemini providers are implemented and unit-tested with mocked responses. The Gemini reader was run on 8 November 2026 against four sample CVs with `gemini-3.5-flash`: it extracted a sensible scorecard from the example JD and its scores matched the keyword matcher on the sample CVs, with every quote verified. The Anthropic reader is tested with mocked responses only. Setting a key and `LLM_PROVIDER` is all it takes, and a key with vision support is also what lets scanned PDFs be read (without one they go to "Needs review").
 
 Two things worth knowing about the deployed behaviour:
 
