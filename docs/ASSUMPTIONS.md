@@ -94,7 +94,7 @@ All assumptions are labelled with their impact and the step they affect.
 
 ## A23 — Default AI Reader Is a Keyword Matcher
 **Assumption:** The brief asks for an AI score but gives no model or key. So that the product works end to end with no key and can be tested deterministically, the default reader (`LLM_PROVIDER=heuristic`) is a whole-word keyword matcher that obeys the same AI rules (verified quotes, code-computed score, never rejects). Anthropic and Gemini readers are built behind the same interface and are used when a key and `LLM_PROVIDER` are set. They are tested with mocked responses. The Gemini reader was run on 8 November 2026 against four sample CVs with `gemini-3.5-flash`: it extracted a sensible scorecard from the example JD and its scores matched the keyword matcher on the sample CVs, with every quote verified. The Anthropic reader is tested with mocked responses only.
-**Impact:** `src/lib/llm/`; the live demo runs on the keyword matcher.
+**Impact:** `src/lib/llm/`; the live demo scores new uploads with Gemini; the 40 pre-loaded candidates were scored by the keyword matcher.
 
 ## A24 — Roles and Accounts
 **Assumption:** Recruiters work across all clients and requisitions (no per-recruiter assignment). The delivery head has full access under the policy (insights, audit log, export). There is no in-app user or client management: accounts and clients are created by the seed script or directly in the database, and self sign-up is disabled.
