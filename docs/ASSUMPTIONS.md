@@ -11,7 +11,7 @@ All assumptions are labelled with their impact and the step they affect.
 **Impact:** Affects client portal API, submission query, and DPDP compliance.
 
 ## A2 — Global Candidate Pool / Deduplication
-**Assumption:** The candidate pool is global. A candidate is identified first by normalised email, then by normalised phone, then by fuzzy match on (full name + most-recent company + most-recent role title) with a Jaro-Winkler similarity ≥ 0.92.  
+**Assumption:** The candidate pool is global. A candidate is identified first by normalised email, then by normalised phone, then by fuzzy match on full name, most-recent company and most-recent role title. The fuzzy rule compares each part on its own (name Jaro-Winkler ≥ 0.95; company ≥ 0.90 and role ≥ 0.85 when both CVs state them) and is NOT used when the two CVs have different e-mail addresses or different phone numbers, because those are two people who happen to share a name. (A first version compared one combined "name|company|role" string at ≥ 0.92; a 500-CV test showed it merging different people at the same employer, so it was replaced.)  
 **If matched:** the existing candidate record is reused; a new score row is created for the requisition.  
 **If not matched:** a new candidate record is created.  
 **Matching details:** e-mail comparison ignores case and `+tag` aliases and ignores dots only for Gmail (on other domains `john.smith` and `johnsmith` are different people); phone comparison uses the last ten digits, so `+91 98765 43210`, `098765 43210` and `98765-43210` match. Two copies of the same person uploaded at the same moment (uploads run four at a time) are reconciled after insertion: the later insert defers to the earlier one.

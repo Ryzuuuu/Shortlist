@@ -86,18 +86,26 @@ const PATTERNS: Pattern[] = [
     replacement: '[REDACTED:PHONE]',
   },
 
-  // Date of birth — explicit DOB label
+  // Parents' and spouse's details reveal gender and marital status: "S/o Ramesh Kumar", "Father's name: ...".
+  {
+    name: 'family',
+    regex:
+      /\b(?:[SDWC]\/[Oo]|[Ss]on\s+of|[Dd]aughter\s+of|[Ww]ife\s+of|[Hh]usband\s+of)\b\.?\s*:?\s*(?:Mr\.?\s*|Mrs\.?\s*|Shri\s+|Late\s+)?[A-Z][\w.'-]*(?:\s+[A-Z][\w.'-]*){0,3}|\b(?:[Ff]ather|[Mm]other|[Ss]pouse|[Hh]usband|[Ww]ife|[Gg]uardian)(?:'s|s)?\s+[Nn]ame\s*[:\-–]\s*[^\n]+/g,
+    replacement: '[REDACTED:FAMILY]',
+  },
+
+  // Date of birth: a DOB label (":" or "-" or none) then "12/03/1995", "12 March 1995" or "March 12, 1995"
   {
     name: 'dob',
     regex:
-      /\b(?:d\.?o\.?b\.?|date\s+of\s+birth|born\s+on?)\s*:?\s*\d{1,2}[\s/\-.]\w+[\s/\-.]\d{2,4}/gi,
+      /\b(?:d\.?o\.?b\.?|date\s+of\s+birth|born(?:\s+on)?)\s*[:\-–]?\s*(?:\d{1,2}(?:st|nd|rd|th)?[\s/\-.,]+\w+[\s/\-.,]+\d{2,4}|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})/gi,
     replacement: '[REDACTED:DOB]',
   },
 
-  // Age — "age: 28", "28 years old"
+  // Age: "age: 28", "Age - 28", "aged 28", "28 years old", "28 yrs old"
   {
     name: 'age',
-    regex: /\b(?:age\s*:?\s*\d{1,3}|\d{1,3}\s+years?\s+old)\b/gi,
+    regex: /\b(?:age|aged)\s*[:\-–]?\s*\d{1,3}(?:\s*(?:years?|yrs?))?\b|\b\d{1,3}\s*(?:years?|yrs?)\s+old\b/gi,
     replacement: '[REDACTED:AGE]',
   },
 
@@ -109,19 +117,33 @@ const PATTERNS: Pattern[] = [
     replacement: '[REDACTED:DATE]',
   },
 
-  // Gender — explicit words and common pronoun markers
+  // Gender: a "Gender:" or "Sex:" label with its value (":" or "-" or none)
   {
     name: 'gender',
     regex:
-      /\b(?:gender|sex)\s*:?\s*(?:male|female|non[\s-]?binary|prefer\s+not\s+to\s+say|transgender|m|f)\b/gi,
+      /\b(?:gender|sex)\s*[:\-–=]?\s*(?:male|female|non[\s-]?binary|prefer\s+not\s+to\s+say|transgender|m|f)\b/gi,
     replacement: '[REDACTED:GENDER]',
   },
 
-  // Marital status
+  // Gender: titles in front of a name (capital M so "miss a deadline" is untouched)
+  {
+    name: 'title',
+    regex: /\b(?:Mr|Mrs|Ms|Mx|Shri|Shrimati|Smt)\b\.?\s*(?=[A-Z[])|\bMiss\s+(?=[A-Z[])/g,
+    replacement: '[REDACTED:GENDER] ',
+  },
+
+  // Gender: unlabelled gendered words and pronouns, so a summary such as "she led the team" carries no gender
+  {
+    name: 'gender_words',
+    regex: /\b(?:male|female|gentleman|lady|he|she|him|his|hers|her|himself|herself)\b/gi,
+    replacement: '[REDACTED:GENDER]',
+  },
+
+  // Marital status: labelled (":" or "-" or none), or an unlabelled "married" / "unmarried" / "divorced" / "widowed"
   {
     name: 'marital',
     regex:
-      /\b(?:marital\s+status|relationship\s+status)\s*:?\s*(?:single|married|divorced|widowed|separated|in\s+a\s+relationship)\b/gi,
+      /\b(?:marital\s+status|relationship\s+status)\s*[:\-–=]?\s*(?:single|unmarried|married|divorced|widowed|separated|in\s+a\s+relationship)\b|\b(?:unmarried|married|divorced|widowed)\b/gi,
     replacement: '[REDACTED:MARITAL]',
   },
 
@@ -137,7 +159,8 @@ const PATTERNS: Pattern[] = [
   {
     name: 'nationality',
     regex:
-      /\b(?:nationality|citizenship|citizen\s+of)\s*:?\s*[A-Za-z\s]+(?=\b)/gi,
+      // Same line only, at most three words: "Nationality: Indian". It must never run on into the next section.
+      /\b(?:nationality|citizenship|citizen\s+of)[^\S\n]*[:\-–]?[^\S\n]*[A-Za-z]+(?:[^\S\n]+[A-Za-z]+){0,2}/gi,
     replacement: '[REDACTED:NATIONALITY]',
   },
 ]

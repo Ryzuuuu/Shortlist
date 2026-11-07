@@ -50,6 +50,64 @@ export function extractJdFilters(jd: string): JdFilter[] {
   return out
 }
 
+// ─── Editing filters ──────────────────────────────────────────────────────────
+
+const FILTER_IDS: Record<JdFilter['type'], string> = {
+  years_experience_range: 'f-exp',
+  max_notice_days: 'f-notice',
+  ctc_range_lpa: 'f-ctc',
+  location: 'f-loc',
+}
+
+const num = (v: unknown, lo: number, hi: number): number | null =>
+  typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null
+
+/** The label shown for a filter, always derived from its value so the two cannot disagree. */
+export function filterLabel(type: JdFilter['type'], value: unknown): string {
+  if (type === 'years_experience_range' && isRange(value)) {
+    return value.max === null ? `Experience ${value.min}+ years` : `Experience ${value.min}-${value.max} years`
+  }
+  if (type === 'max_notice_days' && typeof value === 'number') return `Notice up to ${value} days`
+  if (type === 'ctc_range_lpa' && isRange(value)) return `CTC ${value.min}-${value.max} LPA`
+  if (type === 'location' && typeof value === 'string') return `Location ${value}`
+  return ''
+}
+
+/**
+ * Validates filters coming back from the scorecard form (they are edited by a person, so nothing
+ * can be trusted). Invalid ones are dropped, labels are rebuilt from the values, and there is at
+ * most one filter of each type.
+ */
+export function sanitiseFilters(input: unknown): JdFilter[] {
+  if (!Array.isArray(input)) return []
+  const byType = new Map<JdFilter['type'], JdFilter>()
+  for (const raw of input) {
+    if (typeof raw !== 'object' || raw === null) continue
+    const { type, value } = raw as { type?: unknown; value?: unknown }
+    let clean: unknown = null
+    if (type === 'years_experience_range' && typeof value === 'object' && value !== null) {
+      const min = num((value as { min?: unknown }).min, 0, 60)
+      const maxRaw = (value as { max?: unknown }).max
+      const max = maxRaw === null || maxRaw === undefined ? null : num(maxRaw, 0, 60)
+      if (min !== null && (maxRaw == null || (max !== null && max >= min))) clean = { min, max }
+    } else if (type === 'max_notice_days') {
+      const days = num(value, 0, 365)
+      if (days !== null) clean = Math.round(days)
+    } else if (type === 'ctc_range_lpa' && typeof value === 'object' && value !== null) {
+      const min = num((value as { min?: unknown }).min, 0, 1000)
+      const max = num((value as { max?: unknown }).max, 0, 1000)
+      if (min !== null && max !== null && max >= min) clean = { min, max }
+    } else if (type === 'location' && typeof value === 'string') {
+      const city = value.trim().slice(0, 60)
+      if (city.length >= 2) clean = city
+    }
+    if (clean === null) continue
+    const t = type as JdFilter['type']
+    byType.set(t, { id: FILTER_IDS[t], type: t, value: clean, label: filterLabel(t, clean) })
+  }
+  return [...byType.values()]
+}
+
 // ─── Applying filters to a candidate ─────────────────────────────────────────
 
 /** What the CV says about the candidate, any of which may be unknown. */

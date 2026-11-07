@@ -9,7 +9,7 @@ recruiters' choices. Built as a take-home for a Software Engineering Intern role
 
 ## What it does
 
-1. **JD intake.** Paste a job description; get an editable scorecard (criteria, weights, must-haves) plus experience, notice and CTC filters read from the text.
+1. **JD intake.** Paste a job description; get an editable scorecard (criteria, weights, must-haves) plus experience, notice, CTC and location limits read from the text, each editable (or removable, or added by hand) before saving.
 2. **Bulk CV upload.** PDF or DOCX, up to 4 MB each, up to 500 at a time. One file per request, 4 in parallel, per-file status saved so interrupted uploads resume. Failed and unreadable files stay visible with a Retry button.
 3. **Ranked list with evidence.** Score, per-criterion result, the best verified quote and the next action, per row. Search by name, role or skill and filter by Fit / Below fit / Needs review: nobody is ever removed. The JD's experience, notice and CTC limits show on each candidate as labels, never as verdicts. Split-view CV: click evidence to highlight it in the CV text.
 4. **Submit to client.** Disabled until the recruiter has opened the CV (logged as `viewedByRecruiterAt`, and enforced again on the server).
@@ -24,7 +24,7 @@ recruiters' choices. Built as a take-home for a Software Engineering Intern role
 | --- | --- |
 | The LLM returns only per-criterion `{met, quote, confidence}`; code computes the score from the scorecard weights | `packages/core/src/score-calculator.ts` |
 | Every quote must be a substring of the CV (whitespace and case normalised); otherwise it is dropped and marked unverified, and the claim counts as unknown | `quote-verifier.ts`, `src/lib/ingestion/process.ts` |
-| The candidate's name (as read from the CV), e-mail, phone, labelled gender/age/DOB/marital status and photo mentions are redacted before text reaches the LLM. Best-effort regex: pronouns and unlabelled details are not removed | `redact.ts`, `process.ts` |
+| The candidate's name (as read from the CV), titles (Mr/Mrs/Ms), e-mail, phone, gender words and pronouns, age/DOB, marital status, parents' and spouse's names and photo mentions are redacted before text reaches the LLM. Best-effort regex, not a trained model | `redact.ts`, `process.ts` |
 | The AI never rejects anyone; low scorers stay in the list, labelled "below fit" | `process.ts`, ranked table |
 | Low confidence, scans without a vision provider, or parse failures go to "Needs review", never dropped | `process.ts`, attention list |
 | Results are cached by content hash and scorecard | `src/lib/llm/index.ts` |

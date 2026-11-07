@@ -24,7 +24,7 @@ export default async function PortalRequisition({ params }: { params: Promise<{ 
   return (
     <>
       <p className="text-sm text-[var(--color-muted)]">
-        <Link href="/portal" className="hover:underline">
+        <Link href="/portal" className="inline-flex min-h-11 items-center hover:underline">
           ← Your roles
         </Link>
       </p>

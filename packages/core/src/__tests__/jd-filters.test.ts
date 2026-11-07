@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateFilters, extractJdFilters, summariseFilters } from '../jd-filters'
+import { evaluateFilters, extractJdFilters, sanitiseFilters, summariseFilters } from '../jd-filters'
 
 describe('extractJdFilters', () => {
   it('reads the brief example JD', () => {
@@ -59,5 +59,56 @@ describe('evaluateFilters', () => {
     const f = [{ id: 'l', label: 'Noida', type: 'location', value: 'Noida' }, { id: 'x', label: '?', type: 'mystery', value: 1 }]
     expect(evaluateFilters(f, { location: 'Noida, Uttar Pradesh' })).toEqual([{ id: 'l', label: 'Noida', status: 'meets', detail: 'Noida, Uttar Pradesh (wanted Noida)' }])
     expect(evaluateFilters(f, { location: 'Pune' })[0]?.status).toBe('misses')
+  })
+})
+
+describe('sanitiseFilters (filters edited in the scorecard form)', () => {
+  it('keeps what extraction produced, unchanged', () => {
+    const f = extractJdFilters('Senior Java Developer, 5-8 years, Spring Boot, Noida, notice up to 60 days')
+    expect(sanitiseFilters(f)).toEqual(f)
+  })
+
+  it('rebuilds the label from an edited value', () => {
+    const [f] = sanitiseFilters([{ id: 'x', label: 'old', type: 'max_notice_days', value: 45 }])
+    expect(f).toEqual({ id: 'f-notice', label: 'Notice up to 45 days', type: 'max_notice_days', value: 45 })
+  })
+
+  it('supports an open-ended experience range', () => {
+    const [f] = sanitiseFilters([{ type: 'years_experience_range', value: { min: 8, max: null } }])
+    expect(f?.label).toBe('Experience 8+ years')
+  })
+
+  it('drops invalid values and unknown types', () => {
+    const out = sanitiseFilters([
+      { type: 'max_notice_days', value: -5 },
+      { type: 'max_notice_days', value: 'abc' },
+      { type: 'years_experience_range', value: { min: 9, max: 3 } },
+      { type: 'ctc_range_lpa', value: { min: 10, max: 5 } },
+      { type: 'location', value: ' ' },
+      { type: 'is_admin', value: true },
+      null,
+      'text',
+    ])
+    expect(out).toEqual([])
+  })
+
+  it('keeps one filter per type, the last one wins', () => {
+    const out = sanitiseFilters([
+      { type: 'max_notice_days', value: 30 },
+      { type: 'max_notice_days', value: 90 },
+    ])
+    expect(out).toHaveLength(1)
+    expect(out[0]?.value).toBe(90)
+  })
+
+  it('returns nothing for non-arrays', () => {
+    expect(sanitiseFilters(undefined)).toEqual([])
+    expect(sanitiseFilters({})).toEqual([])
+  })
+
+  it('an edited filter still labels candidates through evaluateFilters', () => {
+    const filters = sanitiseFilters([{ type: 'max_notice_days', value: 30 }])
+    const [check] = evaluateFilters(filters, { noticeDays: 60 })
+    expect(check?.status).toBe('misses')
   })
 })

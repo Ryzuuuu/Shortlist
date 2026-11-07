@@ -22,7 +22,7 @@ export default async function PortalCandidate({ params }: { params: Promise<{ id
   return (
     <>
       <p className="text-sm text-[var(--color-muted)]">
-        <Link href={`/portal/requisitions/${id}`} className="hover:underline">
+        <Link href={`/portal/requisitions/${id}`} className="inline-flex min-h-11 items-center hover:underline">
           ← Candidates
         </Link>
       </p>

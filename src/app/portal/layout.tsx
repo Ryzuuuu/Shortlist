@@ -12,7 +12,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="min-h-dvh">
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-4">
-          <Link href="/portal" className="font-serif text-xl">
+          <Link href="/portal" className="inline-flex min-h-11 items-center font-serif text-xl">
             Shortlist
           </Link>
           <Suspense fallback={<span className="h-8" aria-hidden />}>

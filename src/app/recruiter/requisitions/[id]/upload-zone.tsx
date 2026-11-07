@@ -39,6 +39,7 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
   const [items, setItems] = useState<Item[]>([])
   const [running, setRunning] = useState(false)
   const [over, setOver] = useState(false)
+  const [leftOut, setLeftOut] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const patch = useCallback((key: string, p: Partial<Item>) => {
@@ -82,6 +83,8 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
   )
 
   function addFiles(list: FileList | File[]) {
+    // Never drop files silently: say how many were left out so they can be added as a second batch.
+    setLeftOut(Math.max(0, list.length - MAX_FILES))
     const files = Array.from(list).slice(0, MAX_FILES)
     const next: Item[] = files.map((file, i) => {
       const problem = precheck(file)
@@ -130,6 +133,12 @@ export function UploadZone({ requisitionId }: { requisitionId: string }) {
           Choose files
         </Button>
       </div>
+
+      {leftOut > 0 && (
+        <p role="alert" className="mt-4 text-sm text-[var(--color-warning)]">
+          {leftOut} {leftOut === 1 ? 'file was' : 'files were'} not added: the limit is {MAX_FILES} per batch. Add {leftOut === 1 ? 'it' : 'them'} in a second batch.
+        </p>
+      )}
 
       {items.length > 0 && (
         <div className="mt-4" aria-live="polite">

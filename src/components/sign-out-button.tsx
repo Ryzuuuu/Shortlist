@@ -10,6 +10,7 @@ export function SignOutButton() {
     <Button
       variant="ghost"
       size="sm"
+      className="max-sm:min-h-11"
       onClick={async () => {
         await authClient.signOut()
         router.replace('/login')

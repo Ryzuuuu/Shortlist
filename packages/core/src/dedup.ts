@@ -5,7 +5,8 @@
  * Match order (ASSUMPTION A2):
  *   1. Normalised email (exact match after lowercase + trim)
  *   2. Normalised phone (E.164-normalised, exact)
- *   3. Fuzzy: Jaro-Winkler similarity on (fullName + company + role) ≥ 0.92
+ *   3. Fuzzy, only when neither e-mail nor phone contradicts: near-identical name (Jaro-Winkler ≥ 0.95)
+ *      AND the same employer and role where both CVs state them. Each part is compared on its own.
  *
  * This module only provides the matching functions; the DB lookup is done in
  * the ingestion service which calls these helpers.
@@ -121,32 +122,36 @@ export interface CandidateIdentity {
   currentRole: string | null
 }
 
-/**
- * Build a normalised "identity string" for fuzzy comparison:
- * "<fullName>|<company>|<role>" — all lowercase, trimmed.
- */
-function identityString(identity: CandidateIdentity): string {
-  return [
-    identity.fullName,
-    identity.currentCompany ?? '',
-    identity.currentRole ?? '',
-  ]
-    .map((s) => s.toLowerCase().trim())
-    .join('|')
-}
+const norm = (s: string | null | undefined) =>
+  (s ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+/** Names must be near-identical (a typo is fine); a different surname is a different person. */
+const NAME_THRESHOLD = 0.95
+/** Employer and role are compared on their own, and only when both CVs state them. */
+const COMPANY_THRESHOLD = 0.9
+const ROLE_THRESHOLD = 0.85
 
 /**
- * Returns true if two candidate identities are likely the same person,
- * using Jaro-Winkler similarity ≥ 0.92 on the identity string.
+ * Returns true if two candidate identities are likely the same person.
+ *
+ * Each part is compared ON ITS OWN. (Comparing one combined "name|company|role" string let two
+ * different people at the same employer in the same job look 92% identical, and a 500-CV batch of
+ * different people was merged into a little over half as many candidates.)
  */
-export function isFuzzyMatch(
-  a: CandidateIdentity,
-  b: CandidateIdentity,
-  threshold = 0.92,
-): boolean {
-  const strA = identityString(a)
-  const strB = identityString(b)
-  return jaroWinkler(strA, strB) >= threshold
+export function isFuzzyMatch(a: CandidateIdentity, b: CandidateIdentity): boolean {
+  const nameA = norm(a.fullName)
+  const nameB = norm(b.fullName)
+  if (!nameA || !nameB || jaroWinkler(nameA, nameB) < NAME_THRESHOLD) return false
+
+  const agree = (x: string | null, y: string | null, threshold: number) => {
+    const nx = norm(x)
+    const ny = norm(y)
+    return !nx || !ny || jaroWinkler(nx, ny) >= threshold
+  }
+  return agree(a.currentCompany, b.currentCompany, COMPANY_THRESHOLD) && agree(a.currentRole, b.currentRole, ROLE_THRESHOLD)
 }
 
 // ─── Unified dedup check ──────────────────────────────────────────────────────
@@ -199,11 +204,15 @@ export function findDuplicate(
   let bestScore = 0
 
   for (const existing of existingPool) {
-    const score = jaroWinkler(
-      identityString(incoming.identity),
-      identityString(existing.identity),
-    )
-    if (score >= 0.92 && score > bestScore) {
+    // Two CVs with different e-mail addresses, or different phone numbers, are two people who happen to share
+    // a name: never merge them on a fuzzy guess. Fuzzy matching is for CVs that give no contact to compare.
+    const contradicts =
+      (inEmail && existing.normalisedEmail && inEmail !== existing.normalisedEmail) ||
+      (inPhone && existing.normalisedPhone && inPhone !== existing.normalisedPhone)
+    if (contradicts) continue
+    if (!isFuzzyMatch(incoming.identity, existing.identity)) continue
+    const score = jaroWinkler(norm(incoming.identity.fullName), norm(existing.identity.fullName))
+    if (score > bestScore) {
       bestScore = score
       bestMatch = { candidateId: existing.id, reason: 'fuzzy', similarity: score }
     }

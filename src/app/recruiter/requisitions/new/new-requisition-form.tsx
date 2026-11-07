@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
+import { FilterEditor } from './filter-editor'
 import { createRequisition, suggestScorecard, type DraftScorecard } from '../actions'
 
 type Criterion = DraftScorecard['criteria'][number]
@@ -88,24 +89,7 @@ export function NewRequisitionForm({ clients }: { clients: Array<{ id: string; n
             <p className="text-sm text-[var(--color-muted)]">
               Each criterion has a name, what to look for in a CV, a weight, and whether it is a must-have. Edit anything before saving; nothing is scored until you do.
             </p>
-            {draft.filters.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-[var(--color-muted)]">Filters read from the JD:</span>
-                {draft.filters.map((f) => (
-                  <Badge key={f.id} variant="outline">
-                    {f.label}
-                    <button
-                      type="button"
-                      aria-label={`Remove filter ${f.label}`}
-                      className="ml-2"
-                      onClick={() => setDraft({ ...draft, filters: draft.filters.filter((x) => x.id !== f.id) })}
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <FilterEditor filters={draft.filters} onChange={(filters) => setDraft({ ...draft, filters })} />
 
             <ul className="flex flex-col gap-4">
               {draft.criteria.map((c) => (

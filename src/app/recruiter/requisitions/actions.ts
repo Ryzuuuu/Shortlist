@@ -2,7 +2,7 @@
 
 import { createId } from '@paralleldrive/cuid2'
 import { z } from 'zod'
-import { can, extractJdFilters, type JdFilter } from '@shortlist/core'
+import { can, extractJdFilters, sanitiseFilters, type JdFilter } from '@shortlist/core'
 import { db } from '@/db'
 import { requisitions, scorecards } from '@/db/schema'
 import type { ScorecardCriterion } from '@/db/types'
@@ -96,7 +96,8 @@ export async function createRequisition(input: unknown): Promise<ActionResult<{ 
     requisitionId,
     version: 1,
     criteria,
-    filters: v.filters,
+    // Filters are edited by a person in the form: validate them and rebuild their labels here.
+    filters: sanitiseFilters(v.filters),
   })
   return { ok: true, data: { id: requisitionId } }
 }

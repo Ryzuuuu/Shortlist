@@ -200,3 +200,56 @@ describe('findDuplicate', () => {
     expect(match!.reason).toBe('email')
   })
 })
+
+describe('fuzzy matching never merges different people', () => {
+  const person = (fullName: string, company = 'Northwind Systems', role = 'Senior Java Developer') => ({ fullName, currentCompany: company, currentRole: role })
+
+  it('keeps people with different surnames apart even at the same employer and role', () => {
+    expect(isFuzzyMatch(person('Aarav Sharma'), person('Aarav Sinha'))).toBe(false)
+    expect(isFuzzyMatch(person('Aarav Sharma'), person('Aarav Verma'))).toBe(false)
+    expect(isFuzzyMatch(person('Riya Nair'), person('Riya Rao'))).toBe(false)
+  })
+
+  it('still catches a typo or different spacing and case', () => {
+    expect(isFuzzyMatch(person('Priya Sharma'), person('PRIYA  SHARMA'))).toBe(true)
+    expect(isFuzzyMatch(person('Priya Sharma'), person('Priya Sharme'))).toBe(true)
+  })
+
+  it('needs the same employer and role when both are stated', () => {
+    expect(isFuzzyMatch(person('Priya Sharma'), person('Priya Sharma', 'Infosys', 'Senior Java Developer'))).toBe(false)
+    expect(isFuzzyMatch(person('Priya Sharma'), person('Priya Sharma', 'Northwind Systems', 'Chef'))).toBe(false)
+  })
+
+  it('does not merge two CVs whose e-mail addresses differ', () => {
+    const existing: DedupCandidate[] = [{ id: 'a', normalisedEmail: 'a@x.com', normalisedPhone: null, identity: person('Amit Kumar') }]
+    const incoming: DedupCandidate = { id: 'b', normalisedEmail: 'b@y.com', normalisedPhone: null, identity: person('Amit Kumar') }
+    expect(findDuplicate(incoming, existing)).toBeNull()
+  })
+
+  it('does not merge two CVs whose phone numbers differ', () => {
+    const existing: DedupCandidate[] = [{ id: 'a', normalisedEmail: null, normalisedPhone: '9876543210', identity: person('Amit Kumar') }]
+    const incoming: DedupCandidate = { id: 'b', normalisedEmail: null, normalisedPhone: '9123456789', identity: person('Amit Kumar') }
+    expect(findDuplicate(incoming, existing)).toBeNull()
+  })
+
+  it('merges on name when one CV gives no contact to compare', () => {
+    const existing: DedupCandidate[] = [{ id: 'a', normalisedEmail: 'a@x.com', normalisedPhone: null, identity: person('Amit Kumar') }]
+    const incoming: DedupCandidate = { id: 'b', normalisedEmail: null, normalisedPhone: null, identity: person('Amit Kumar') }
+    expect(findDuplicate(incoming, existing)?.reason).toBe('fuzzy')
+  })
+
+  it('a batch of 200 different people at the same employer is never merged', () => {
+    const first = ['Aarav', 'Vivaan', 'Aditya', 'Sai', 'Arjun', 'Kabir', 'Ananya', 'Diya', 'Saanvi', 'Riya']
+    const last = ['Sharma', 'Verma', 'Gupta', 'Iyer', 'Nair', 'Reddy', 'Menon', 'Joshi', 'Mehta', 'Bansal', 'Rawat', 'Pillai', 'Das', 'Singh', 'Khan', 'Malhotra', 'Tiwari', 'Bhatt', 'Saxena', 'Chopra']
+    const pool: DedupCandidate[] = []
+    for (const f of first) {
+      for (const l of last) {
+        const i = pool.length
+        const incoming: DedupCandidate = { id: `c${i}`, normalisedEmail: `p${i}@x.com`, normalisedPhone: `98${String(10000000 + i)}`, identity: person(`${f} ${l}`) }
+        expect(findDuplicate(incoming, pool)).toBeNull()
+        pool.push(incoming)
+      }
+    }
+    expect(pool).toHaveLength(200)
+  })
+})

@@ -230,7 +230,8 @@ function splitRoleCompany(raw: string): { role: string; company: string } | null
   if (parts.length < 2) return null
   // Narrative fragments ("Worked at ...", "Previously at ... as analyst") are not job-title lines.
   const NARRATIVE = /\b(as|worked|previously|currently|working|responsible|joined|was|were|since|from)\b/i
-  const plausible = (p: string) => p.length <= 70 && p.split(' ').length <= 7 && !NARRATIVE.test(p)
+  // A company is a name, never a duration or number ("6.5 years").
+  const plausible = (p: string) => p.length <= 70 && p.split(' ').length <= 7 && !NARRATIVE.test(p) && !/^\d/.test(p) && !/\b(?:years?|yrs?|months?)\b/i.test(p)
   const roleIdx = parts.findIndex((p) => ROLE_WORDS.test(p) && plausible(p))
   if (roleIdx < 0) return null
   const role = parts[roleIdx] as string
@@ -275,6 +276,9 @@ function extractStatedExperience(text: string): number | null {
     const m = text.match(re)
     if (m?.[1]) return round1(Number(m[1]) + (m[2] ? Number(m[2]) / 12 : 0))
   }
+  // Under a year, stated in months only: "Work experience: 8 months".
+  const months = text.match(/experience[^.\n\d]{0,25}(\d{1,2})\s*(?:months?|mos?)\b/i)
+  if (months?.[1]) return round1(Number(months[1]) / 12)
   return null
 }
 
@@ -356,8 +360,14 @@ function extractEducation(all: string[]): EducationItem[] {
 }
 
 function extractLocation(text: string, all: string[]): string | null {
-  const m = text.match(/(?:current location|location|address|city|based in)\s*[:\-–]\s*([A-Za-z][A-Za-z ,.]{2,50})/i)
-  if (m?.[1]) return clean(m[1]).replace(/[,.]+$/, '')
+  const labelled = text.match(/(?:current location|location|address|city|based in)\s*[:\-–]\s*([^\n]{2,120})/i)
+  if (labelled?.[1]) {
+    // An address line ("Sector 62, Noida, Uttar Pradesh 201301") holds a street first: prefer the known city in it.
+    const city = findCity(labelled[1])
+    if (city) return city
+    const m = labelled[1].match(/^([A-Za-z][A-Za-z ,.]{2,50})/)
+    if (m?.[1]) return clean(m[1]).replace(/[,.]+$/, '')
+  }
   // No label: a known city in the header block (the first lines) is where the candidate lives.
   return findCity(all.slice(0, 12).join('\n'))
 }
@@ -375,7 +385,10 @@ function fallbackCurrent(all: string[]): { role: string | null; company: string 
 
 function extractHeadline(all: string[]): string {
   for (const line of all.slice(0, 10)) {
-    if (line.length <= 80 && ROLE_WORDS.test(line) && !EMAIL_RE.test(line) && !/\d{4}/.test(line) && !/^(?:name|candidate)/i.test(line)) return clean(line)
+    if (line.length <= 80 && ROLE_WORDS.test(line) && !EMAIL_RE.test(line) && !/\d{4}/.test(line) && !/^(?:name|candidate)/i.test(line)) {
+      // "Current Role: Java Developer" -> "Java Developer"
+      return clean(line).replace(/^(?:current\s+)?(?:role|designation|position|title)\s*[:\-–]\s*/i, '')
+    }
   }
   return ''
 }
