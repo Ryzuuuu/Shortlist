@@ -79,7 +79,7 @@ You need **Node 24** (`node -v`; the project pins `24.x`), npm, and a free **Neo
    ```bash
    npm run typecheck
    npm run lint
-   npm test          # 305 tests
+   npm test          # 352 tests
    npm run smoke     # end-to-end checks against a running app; set BASE_URL (default is local) and SEED_PASSWORD
    ```
 
